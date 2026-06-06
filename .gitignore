@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# WXT build outputs
+.output/
+.wxt/
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env
+.env
+.env.*
+!.env.example
