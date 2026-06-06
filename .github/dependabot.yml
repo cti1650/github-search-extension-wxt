@@ -6,32 +6,55 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    ignore:
+      - dependency-name: "typescript"
+      - dependency-name: "@biomejs/*"
+      - dependency-name: "wxt"
+      - dependency-name: "@wxt-dev/*"
+      - dependency-name: "playwright"
+      - dependency-name: "@playwright/*"
     groups:
-      wxt:
-        patterns:
-          - "wxt"
-          - "@wxt-dev/*"
       react:
         patterns:
           - "react"
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
       testing:
         patterns:
           - "vitest"
           - "@testing-library/*"
           - "jsdom"
+        update-types:
+          - "minor"
+          - "patch"
       tailwind:
         patterns:
           - "tailwindcss"
           - "@tailwindcss/*"
-      biome:
+        update-types:
+          - "minor"
+          - "patch"
+      lint-hooks:
         patterns:
-          - "@biomejs/*"
+          - "lefthook"
+          - "@commitlint/*"
+        update-types:
+          - "patch"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
