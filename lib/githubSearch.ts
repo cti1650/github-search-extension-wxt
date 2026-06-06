@@ -4,7 +4,7 @@ type Props = {
   extensionKeyword: string;
 };
 
-export type SearchType = 'Code' | 'Packages' | 'Repositories';
+export type SearchType = 'Code' | 'Repositories';
 
 export const buildGitHubSearch = (props: Props) => {
   const { keyword, exclusionKeyword, extensionKeyword } = props;
@@ -49,9 +49,6 @@ export const buildGitHubSearch = (props: Props) => {
     switch (type) {
       case 'Code':
         window.open(`https://github.com/search?type=code&q=${query}`, '_blank');
-        break;
-      case 'Packages':
-        window.open(`https://github.com/search?type=registrypackages&q=${query}`, '_blank');
         break;
       case 'Repositories':
         window.open(`https://github.com/search?type=repositories&q=${query}`, '_blank');
