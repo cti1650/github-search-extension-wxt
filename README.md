@@ -28,7 +28,7 @@ Popup から検索条件を組み立てて新規タブで GitHub 検索を開く
 - パッケージ管理: **pnpm**
 - Lint / Format: **Biome**
 - Test: **Vitest** + Testing Library (jsdom)
-- Git hooks: **Lefthook**
+- Git hooks: **Lefthook** + **commitlint** (Conventional Commits)
 - CI: GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml))
 - 依存関係更新: Dependabot ([.github/dependabot.yml](.github/dependabot.yml))
 
@@ -74,6 +74,7 @@ pnpm test:watch  # Vitest watch mode
 | Hook | 実行内容 |
 | --- | --- |
 | `pre-commit` | staged ファイルに対して `biome check --write`（自動修正を再ステージ） |
+| `commit-msg` | `commitlint` で Conventional Commits 準拠を検証 |
 | `pre-push`   | `pnpm compile` と `pnpm test` |
 
 設定: [lefthook.yml](./lefthook.yml)
@@ -91,11 +92,11 @@ components/
   TextBox.tsx    # 入力値を chrome.storage に自動保存
   Buttons.tsx
 hooks/
-  useGitHubSearch.ts  # キーワードから GitHub 検索 URL を組み立て
   useStorage.ts       # WXT storage を React state に同期
 lib/
-  storage.ts    # storage アイテム定義
-  migrate.ts    # 旧 localStorage → chrome.storage の一回限り移行
+  githubSearch.ts # キーワードから GitHub 検索 URL を組み立て
+  storage.ts      # storage アイテム定義
+  migrate.ts      # 旧 localStorage → chrome.storage の一回限り移行
 assets/
   global.css    # Tailwind v4 エントリ
   icon.png      # @wxt-dev/auto-icons の源画像
