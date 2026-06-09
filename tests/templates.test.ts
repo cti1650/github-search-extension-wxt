@@ -86,7 +86,7 @@ describe('mergeBuiltins', () => {
     ];
     const merged = mergeBuiltins(stored);
     expect(merged.length).toBe(BUILTIN_TEMPLATES.length);
-    expect(merged.some((t) => t.id === 'builtin:lockfile')).toBe(true);
+    expect(merged.some((t) => t.id === 'builtin:npm-package')).toBe(true);
   });
 
   it('drops builtins that no longer exist in DEFAULT_TEMPLATES', () => {

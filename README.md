@@ -53,7 +53,7 @@ Popup から検索条件を組み立てて新規タブで GitHub 検索を開く
 | 品質 | Stars 100+ / Stars 1000+ | `stars:>100` / `stars:>1000` |
 | 鮮度 | Pushed: last 7 / 30 / 90 days | `pushed:>{{7d}}` / `pushed:>{{30d}}` / `pushed:>{{90d}}` |
 | 鮮度 | Created: last 30 days / last year | `created:>{{30d}}` / `created:>{{365d}}` |
-| 依存 | Lockfile | `(path:package-lock.json OR path:yarn.lock OR path:pnpm-lock.yaml)` |
+| 依存 | npm Package | `(path:package.json OR path:package-lock.json OR path:yarn.lock OR path:pnpm-lock.yaml)` |
 | セキュリティ | SECURITY.md | `path:SECURITY.md` |
 
 ### カスタムテンプレート
@@ -67,7 +67,7 @@ Options ページの「カスタムテンプレート」セクションから追
 
 1. Side Panel モードに切替（Options より）
 2. Options で `Org = mycompany` を登録 → Scope を `Org` に
-3. テンプレート `Lockfile` を有効化、Keyword に `lodash` → `Code` で社内依存を調査
+3. テンプレート `npm Package` を有効化、Keyword に `lodash` → `Code` で社内依存を調査
 4. Keyword に `CVE-2025-12345` を入力 → `Advisory` ボタンで GitHub Security Advisory DB を検索
 
 ## 技術スタック

@@ -29,9 +29,10 @@ export const BUILTIN_TEMPLATES: ReadonlyArray<Omit<Template, 'enabled' | 'builti
   { id: 'builtin:created-365d', name: 'Created: last year', pattern: 'created:>{{365d}}' },
   // 依存・セキュリティ
   {
-    id: 'builtin:lockfile',
-    name: 'Lockfile',
-    pattern: '(path:package-lock.json OR path:yarn.lock OR path:pnpm-lock.yaml)',
+    id: 'builtin:npm-package',
+    name: 'npm Package',
+    pattern:
+      '(path:package.json OR path:package-lock.json OR path:yarn.lock OR path:pnpm-lock.yaml)',
   },
   { id: 'builtin:security-md', name: 'SECURITY.md', pattern: 'path:SECURITY.md' },
 ];
