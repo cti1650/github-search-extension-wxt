@@ -1,16 +1,27 @@
 # GitHub Search Extension
 
-GitHub の Code / Repositories 検索を、キーワード・除外ワード・拡張子フィルタを組み合わせて素早く実行できる Chrome 拡張機能です。
+GitHub の Code / Repositories / Issues / Commits / Security Advisories を、キーワード・除外ワード・拡張子フィルタ・テンプレートを組み合わせて素早く検索できる Chrome 拡張機能です。
 Popup から検索条件を組み立てて新規タブで GitHub 検索を開くほか、ページ上の選択テキストから右クリック → コード検索もできます。
 
 ## 機能
 
-- **Popup**: キーワード / 除外ワード / 拡張子フィルタを入力し、`Code` または `Repositories` で検索
+- **Popup**: `Code` / `Repositories` の 2 種から検索（コンパクトな日常用途）
+- **Side Panel**: `Code` / `Repositories` / `Issues` / `Commits` / `Advisory` の全 5 種から検索（CVE 調査・横断調査向け）
+- **表示モード切替**: Options ページから Popup / Side Panel を選択（Chrome は Side Panel、Firefox は Sidebar に自動マップ）
+- **Scope**: Org / User / Repo をコンマ区切りで事前登録 → Panel の `All` / `Org` / `User` / `Repo` ボタンで検索範囲を切替
+- **Templates**: GitHub qualifier をチップ化してトグル。`is:pr`, `Lockfile`, `Pushed: last 30 days` などプリセット中心。カスタムテンプレートでは `%s`（ユーザー入力）と `{{Nd}}`（N 日前の日付に展開）が使用可能
+- **Options ページ**: 新規タブで全面表示。表示モード / Scope リスト / 組み込みテンプレートの ON/OFF / カスタムテンプレートの追加・編集・削除
 - **Context Menu**: ページ上で選択中のテキストを GitHub Code Search で開く（右クリック → "GitHub Code Search"）
-- **ショートカット**: `Alt+G` で Popup を開く（`chrome://extensions/shortcuts` から変更可）
-- **入力値の保存**: 検索条件は `chrome.storage.local` に保存され、次回起動時に復元
+- **ショートカット**: `Alt+G` で UI を開く（モードに応じて popup / sidepanel）
+- **入力値の保存**: 検索条件・テンプレート・Scope 設定・表示モードは `chrome.storage.local` に保存され、次回起動時に復元
 
 ## 検索クエリの組み立て
+
+クエリは以下の順で連結されます（GitHub の qualifier 文法に合わせ、qualifier → keyword の順）:
+
+```
+[scope clause] [template patterns] [keyword AND exclusion AND extensions]
+```
 
 | 入力欄 | 例 | 生成されるクエリ |
 | --- | --- | --- |
@@ -19,6 +30,45 @@ Popup から検索条件を組み立てて新規タブで GitHub 検索を開く
 | Exclusion | `test` | `-test` |
 | File or Extension | `tsx,ts` | `(path:*.tsx OR path:*.ts)` |
 | File or Extension | `package.json` | `path:package.json` |
+| Template (静的) | `Is PR` (toggle) | `is:pr` |
+| Template (日付マクロ) | `Pushed: last 30 days` | `pushed:>2026-05-10` |
+| Scope (Org, 単一) | `apache` | `org:apache` |
+| Scope (Org, 複数) | `apache,google` | `(org:apache OR org:google)` |
+
+## Scope
+
+事前に Options ページで Org / User / Repo を **コンマ区切り** で登録しておき、Panel の `All` / `Org` / `User` / `Repo` ボタンで検索範囲を切替。
+
+例: Options で `Org = apache,google,facebook` を登録 → Panel で `Org` ボタンを選択 → 全検索に `(org:apache OR org:google OR org:facebook)` が付与される。
+
+未設定の Scope を選択すると ⚠ マークが表示され、その分はクエリに含まれません（Keyword だけで検索）。
+
+## Templates
+
+### 組み込みサンプル（全てデフォルト OFF — Options ページで有効化）
+
+| カテゴリ | 名前 | パターン |
+| --- | --- | --- |
+| 種別 | Is PR / Merged PR / Open Issue | `is:pr` / `is:pr is:merged` / `is:issue is:open` |
+| 品質 | Stars 100+ / Stars 1000+ | `stars:>100` / `stars:>1000` |
+| 鮮度 | Pushed: last 7 / 30 / 90 days | `pushed:>{{7d}}` / `pushed:>{{30d}}` / `pushed:>{{90d}}` |
+| 鮮度 | Created: last 30 days / last year | `created:>{{30d}}` / `created:>{{365d}}` |
+| 依存 | Lockfile | `(path:package-lock.json OR path:yarn.lock OR path:pnpm-lock.yaml)` |
+| セキュリティ | SECURITY.md | `path:SECURITY.md` |
+
+### カスタムテンプレート
+
+Options ページの「カスタムテンプレート」セクションから追加。以下の特殊記法が使用可能:
+
+- `%s` … Popup / Side Panel でアクティブ化した際にインライン入力欄が現れ、値を差し込み（例: `language:%s` → `python` 入力で `language:python`）
+- `{{Nd}}` … N 日前の日付に展開（例: `pushed:>{{14d}}` → `pushed:>2026-05-26`）
+
+### CVE 調査の例
+
+1. Side Panel モードに切替（Options より）
+2. Options で `Org = mycompany` を登録 → Scope を `Org` に
+3. テンプレート `Lockfile` を有効化、Keyword に `lodash` → `Code` で社内依存を調査
+4. Keyword に `CVE-2025-12345` を入力 → `Advisory` ボタンで GitHub Security Advisory DB を検索
 
 ## 技術スタック
 
@@ -83,18 +133,27 @@ pnpm test:watch  # Vitest watch mode
 
 ```
 entrypoints/
-  popup/          # Popup (action click / Alt+G)
-  background.ts   # 右クリックメニューハンドラ
+  popup/          # Popup (action click / Alt+G・displayMode=popup 時)
+  sidepanel/      # Side Panel (Chrome) / Sidebar (Firefox)
+  options/        # Options ページ（表示モード・テンプレート管理、新規タブで全面表示）
+  background.ts   # 右クリックメニュー + 表示モード切替ハンドラ
 components/
   layouts/PopupApp.tsx
+  layouts/SidepanelApp.tsx
+  layouts/OptionsApp.tsx
+  SearchPanel.tsx     # Popup / Sidepanel 共有の検索 UI
+  ScopeSelector.tsx   # All/Org/User/Repo 切替ボタン
   Layout.tsx
   Title.tsx
-  TextBox.tsx    # 入力値を chrome.storage に自動保存
+  TextBox.tsx         # 入力値を chrome.storage に自動保存
   Buttons.tsx
+  TemplateChips.tsx   # SearchPanel 内のテンプレートチップ
 hooks/
   useStorage.ts       # WXT storage を React state に同期
 lib/
-  githubSearch.ts # キーワードから GitHub 検索 URL を組み立て
+  githubSearch.ts # キーワード+テンプレート+scope から GitHub 検索 URL を組み立て
+  templates.ts    # テンプレート型・組み込みサンプル・日付マクロ・storage 定義
+  preferences.ts  # 表示モード・Scope 設定とクロース生成
   storage.ts      # storage アイテム定義
   migrate.ts      # 旧 localStorage → chrome.storage の一回限り移行
 assets/
@@ -109,6 +168,15 @@ biome.json
 vitest.config.ts
 lefthook.yml
 ```
+
+## 表示モード（Popup / Side Panel）
+
+| モード | 挙動 |
+| --- | --- |
+| Popup（既定） | ツールバーアイコンクリック / `Alt+G` で 370px のポップアップ |
+| Side Panel | クリック / `Alt+G` でブラウザ右側のサイドパネルに常駐表示（Chrome）/ サイドバーに表示（Firefox） |
+
+Options ページの「表示モード」セクションでラジオ切替。background script が `browser.action.setPopup` と `browser.sidePanel.setPanelBehavior` を即座に再設定します。
 
 ## 旧バージョン (Next.js 版) からの移行
 

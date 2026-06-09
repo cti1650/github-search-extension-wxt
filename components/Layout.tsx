@@ -8,7 +8,7 @@ type Props = {
 
 export const Layout = ({ title, children }: Props) => {
   return (
-    <div className="my-1 mx-6 w-[370px]">
+    <div className="my-1">
       <Title label={title} />
       <div className="flex flex-col">{children}</div>
     </div>

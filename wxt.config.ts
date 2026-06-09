@@ -3,10 +3,15 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react', '@wxt-dev/auto-icons'],
-  manifest: {
+  manifest: ({ browser }) => ({
     name: 'GitHub Search Extension',
     description: 'GitHub Search Extension',
-    permissions: ['contextMenus', 'activeTab', 'storage'],
+    permissions: [
+      'contextMenus',
+      'activeTab',
+      'storage',
+      ...(browser === 'chrome' ? ['sidePanel'] : []),
+    ],
     action: {
       default_title: 'GitHub Search Extension',
     },
@@ -18,7 +23,7 @@ export default defineConfig({
         },
       },
     },
-  },
+  }),
   vite: () => ({
     plugins: [tailwindcss()],
   }),
