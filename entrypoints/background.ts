@@ -5,6 +5,7 @@ import {
   displayModeItem,
   normalizeQuickSearch,
   quickSearchItem,
+  scopeModeItem,
   scopeOrgsItem,
   scopeReposItem,
   scopeUsersItem,
@@ -12,7 +13,7 @@ import {
 import {
   computeActiveTemplates,
   mergeBuiltins,
-  type TemplateActivation,
+  templateActivationsItem,
   templatesItem,
 } from '@/lib/templates';
 
@@ -58,27 +59,29 @@ export default defineBackground(() => {
     await applyDisplayMode(mode);
   };
 
-  const resolveActiveTemplates = async (
-    activations: Record<string, TemplateActivation>,
-  ): Promise<ActiveTemplate[]> => {
-    const stored = await templatesItem.getValue();
+  const loadActiveTemplates = async (): Promise<ActiveTemplate[]> => {
+    const [stored, activations] = await Promise.all([
+      templatesItem.getValue(),
+      templateActivationsItem.getValue(),
+    ]);
     return computeActiveTemplates(mergeBuiltins(stored), activations);
   };
 
   /**
    * Build a search URL for short-form entry points (context menu, omnibox).
-   * The QuickSearchConfig owns its own scopeMode and templateActivations,
-   * independent from the Side Panel state.
+   * Scope and Templates are shared with the Side Panel — only the search
+   * target type lives in QuickSearchConfig.
    */
   const buildQuickSearchUrl = async (keyword: string): Promise<string> => {
-    const config = normalizeQuickSearch(await quickSearchItem.getValue());
-    const [orgs, users, repos, templates] = await Promise.all([
+    const [config, scopeMode, orgs, users, repos, templates] = await Promise.all([
+      quickSearchItem.getValue().then(normalizeQuickSearch),
+      scopeModeItem.getValue(),
       scopeOrgsItem.getValue(),
       scopeUsersItem.getValue(),
       scopeReposItem.getValue(),
-      resolveActiveTemplates(config.templateActivations),
+      loadActiveTemplates(),
     ]);
-    const scopeClause = buildScopeClause(config.scopeMode, orgs, users, repos);
+    const scopeClause = buildScopeClause(scopeMode, orgs, users, repos);
     const { buildUrl } = buildGitHubSearch({
       keyword,
       exclusionKeyword: '',

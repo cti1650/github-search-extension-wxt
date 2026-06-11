@@ -8,6 +8,7 @@ import {
   normalizeQuickSearch,
   type QuickSearchConfig,
   quickSearchItem,
+  scopeModeItem,
   scopeOrgsItem,
   scopeReposItem,
   scopeUsersItem,
@@ -19,6 +20,7 @@ import {
   resetTemplatesToDefault,
   type Template,
   type TemplateActivation,
+  templateActivationsItem,
   templatesItem,
 } from '@/lib/templates';
 
@@ -32,6 +34,8 @@ export default function OptionsApp() {
   const [users, setUsers] = useStorage(scopeUsersItem);
   const [repos, setRepos] = useStorage(scopeReposItem);
   const [quickSearchRaw, setQuickSearch] = useStorage(quickSearchItem);
+  const [scopeMode, setScopeMode] = useStorage(scopeModeItem);
+  const [activations, setActivations] = useStorage(templateActivationsItem);
   const quickSearch = normalizeQuickSearch(quickSearchRaw);
   const templates = mergeBuiltins(stored);
 
@@ -158,7 +162,7 @@ export default function OptionsApp() {
                 <code className="px-1.5 py-0.5 rounded bg-gray-800 text-blue-300">
                   gse &lt;キーワード&gt;
                 </code>{' '}
-                を入力したときに使われる検索条件を、Side Panel とは独立して設定します。
+                を入力したときに使われる検索条件です。
               </p>
               <QuickSearchTypeRow
                 value={quickSearch.searchType}
@@ -168,12 +172,12 @@ export default function OptionsApp() {
 
             <Section title="Scope">
               <p className="text-xs text-gray-400 mb-3">
-                クイック検索で使う検索範囲。Org / User / Repo
-                のリストは「検索オプション」タブの設定を参照します。
+                Side Panel と共有の検索範囲。ここで切り替えると Side Panel
+                の選択も即時に更新されます。
               </p>
               <ScopeSelector
-                value={quickSearch.scopeMode}
-                onChange={(scopeMode) => setQuickSearch({ ...quickSearch, scopeMode })}
+                value={scopeMode}
+                onChange={setScopeMode}
                 orgs={orgs}
                 users={users}
                 repos={repos}
@@ -183,8 +187,8 @@ export default function OptionsApp() {
 
             <Section title="Templates">
               <p className="text-xs text-gray-400 mb-3">
-                クイック検索でアクティブにするテンプレート。 Side Panel
-                のチップ状態とは独立に保存されます。
+                Side Panel と共有のアクティブ状態。ここでチェックすると Side Panel
+                のチップも即時にトグルされ、クイック検索でも同じ条件で検索されます。
               </p>
               {enabledTemplates.length === 0 ? (
                 <p className="text-sm text-gray-500">
@@ -196,14 +200,11 @@ export default function OptionsApp() {
                     <QuickTemplateRow
                       key={t.id}
                       template={t}
-                      activation={quickSearch.templateActivations[t.id]}
+                      activation={activations[t.id]}
                       onChange={(next) =>
-                        setQuickSearch({
-                          ...quickSearch,
-                          templateActivations: {
-                            ...quickSearch.templateActivations,
-                            [t.id]: next,
-                          },
+                        setActivations({
+                          ...activations,
+                          [t.id]: next,
                         })
                       }
                     />
