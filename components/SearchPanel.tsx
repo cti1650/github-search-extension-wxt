@@ -60,6 +60,10 @@ export const SearchPanel = ({
     open(label as SearchType);
   };
 
+  // Enter key in any of the text inputs triggers the first (primary) Search Type button.
+  const primarySearchType = searchTypes[0];
+  const handleSubmit = primarySearchType ? () => handleClick(primarySearchType) : undefined;
+
   const openOptions = () => {
     void browser.runtime.openOptionsPage();
   };
@@ -70,16 +74,19 @@ export const SearchPanel = ({
         label="Keyword"
         placeholder="Search or jump to… ( keyword )"
         holder="search_keyword"
+        onSubmit={handleSubmit}
       />
       <TextBox
         label="Exclusion"
         placeholder="Add keywords for searching ( -keyword )"
         holder="search_exclusion_keyword"
+        onSubmit={handleSubmit}
       />
       <TextBox
         label="File or Extension"
         placeholder="file extension keyword ( tsx,ts )"
         holder="search_file_extension_keyword"
+        onSubmit={handleSubmit}
       />
       {showScope && (
         <ScopeSelector

@@ -113,6 +113,44 @@ export default defineBackground(() => {
     void browser.tabs.create({ url });
   });
 
+  type ScriptingLike = {
+    executeScript: (args: {
+      target: { tabId: number };
+      func: () => string;
+    }) => Promise<Array<{ result?: string }>>;
+  };
+  const getScripting = (): ScriptingLike | undefined =>
+    (browser as unknown as { scripting?: ScriptingLike }).scripting;
+
+  /**
+   * Read the current selection from the active tab. Uses scripting.executeScript,
+   * which is granted via activeTab when the command is invoked by the user.
+   */
+  const readActiveTabSelection = async (): Promise<string> => {
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return '';
+    const scripting = getScripting();
+    if (!scripting) return '';
+    try {
+      const results = await scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => window.getSelection()?.toString() ?? '',
+      });
+      return results[0]?.result ?? '';
+    } catch (error) {
+      console.error('[github-search-extension] failed to read selection:', error);
+      return '';
+    }
+  };
+
+  browser.commands.onCommand.addListener(async (command) => {
+    if (command !== 'search-selection') return;
+    const selection = (await readActiveTabSelection()).trim();
+    if (!selection) return;
+    const url = await buildQuickSearchUrl(selection);
+    void browser.tabs.create({ url });
+  });
+
   type OmniboxLike = {
     onInputEntered: {
       addListener(cb: (text: string) => void): void;

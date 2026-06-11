@@ -10,6 +10,7 @@ export default defineConfig({
       'contextMenus',
       'activeTab',
       'storage',
+      'scripting',
       ...(browser === 'chrome' ? ['sidePanel'] : []),
     ],
     action: {
@@ -20,6 +21,13 @@ export default defineConfig({
         suggested_key: {
           default: 'Alt+G',
           mac: 'Alt+G',
+        },
+      },
+      'search-selection': {
+        description: 'Search the current page selection on GitHub',
+        suggested_key: {
+          default: 'Alt+Shift+G',
+          mac: 'Alt+Shift+G',
         },
       },
     },

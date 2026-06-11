@@ -17,7 +17,11 @@ Popup から検索条件を組み立てて新規タブで GitHub 検索を開く
   - **クイック検索**: 検索対象（クイック検索専用）/ Scope（Side Panel と共有）/ Templates（Side Panel と共有）
   - **検索オプション**: Scope リスト（Org/User/Repo）、組み込み・カスタムテンプレートの ON/OFF
   - **設定**: 表示モード（Popup / Side Panel）
-- **ショートカット**: `Alt+G` で UI を開く（モードに応じて popup / sidepanel）
+- **ショートカット**:
+  - `Alt+G` で UI を開く（モードに応じて popup / sidepanel）
+  - `Alt+Shift+G` でページ上の選択テキストを直接クイック検索（コンテキストメニューと同じ挙動をキーボードだけで）
+  - パネル内の Keyword / Exclusion / File 入力欄で **Enter キー** を押すと先頭の検索対象（Popup なら Code、Side Panel なら Code）で即時検索
+  - キーは `chrome://extensions/shortcuts` から変更可
 - **入力値の保存**: 検索条件・テンプレート・Scope 設定・表示モード・クイック検索設定は `chrome.storage.local` に保存され、次回起動時に復元
 
 ## 検索クエリの組み立て
