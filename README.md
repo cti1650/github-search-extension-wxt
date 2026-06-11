@@ -1,7 +1,8 @@
 # GitHub Search Extension
 
-GitHub の Code / Repositories / Issues / Commits / Security Advisories を、キーワード・除外ワード・拡張子フィルタ・テンプレートを組み合わせて素早く検索できる Chrome 拡張機能です。
-Popup から検索条件を組み立てて新規タブで GitHub 検索を開くほか、ページ上の選択テキストから右クリック → コード検索もできます。
+GitHub の Code / Repositories / Issues / Commits / Security Advisories を、キーワード・除外ワード・拡張子フィルタ・テンプレート・Scope を組み合わせて素早く検索できるブラウザ拡張機能です。
+
+UI は Popup（ミニマル）と Side Panel（フル機能）の 2 種類から選択でき、コンテキストメニュー・オムニボックス（`gse <キーワード>`）・キーボードショートカット（`Alt+Shift+G` で選択テキスト即検索）からの呼び出しにも対応。Chrome (Manifest V3) と Firefox の両方をサポートします。
 
 ## 機能
 
@@ -158,28 +159,28 @@ pnpm test:watch  # Vitest watch mode
 
 ```
 entrypoints/
-  popup/          # Popup (action click / Alt+G・displayMode=popup 時)
+  popup/          # Popup（action click / Alt+G・displayMode=popup 時）
   sidepanel/      # Side Panel (Chrome) / Sidebar (Firefox)
-  options/        # Options ページ（表示モード・テンプレート管理、新規タブで全面表示）
-  background.ts   # 右クリックメニュー + 表示モード切替ハンドラ
+  options/        # Options ページ（3 タブ、新規タブで全面表示）
+  background.ts   # コンテキストメニュー / オムニボックス / commands ハンドラ
+                  # + displayMode 監視で action.setPopup と sidePanel.setPanelBehavior を切替
 components/
-  layouts/PopupApp.tsx
-  layouts/SidepanelApp.tsx
-  layouts/OptionsApp.tsx
+  layouts/PopupApp.tsx     # 薄いラッパー: showScope=false, showTemplates=false
+  layouts/SidepanelApp.tsx # 薄いラッパー: 全機能を表示
+  layouts/OptionsApp.tsx   # タブ: クイック検索 / 検索オプション / 設定
   SearchPanel.tsx     # Popup / Sidepanel 共有の検索 UI
-  ScopeSelector.tsx   # All/Org/User/Repo 切替ボタン
-  Layout.tsx
-  Title.tsx
-  TextBox.tsx         # 入力値を chrome.storage に自動保存
-  Buttons.tsx
-  TemplateChips.tsx   # SearchPanel 内のテンプレートチップ
+  ScopeSelector.tsx   # All/Org/User/Repo 切替ボタン（value/onChange でパラメータ化）
+  TemplateChips.tsx   # アクティブ状態を storage から直接 derive するチップ
+  TextBox.tsx         # 入力値を chrome.storage に自動保存・onSubmit で Enter 検索
+  Buttons.tsx         # ボタン数で grid-cols を切替
+  Layout.tsx / Title.tsx
 hooks/
-  useStorage.ts       # WXT storage を React state に同期
+  useStorage.ts       # WXT storage を React state に同期（cross-context 即時反映）
 lib/
-  githubSearch.ts # キーワード+テンプレート+scope から GitHub 検索 URL を組み立て
-  templates.ts    # テンプレート型・組み込みサンプル・日付マクロ・storage 定義
-  preferences.ts  # 表示モード・Scope 設定とクロース生成
-  storage.ts      # storage アイテム定義
+  githubSearch.ts # キーワード+テンプレート+scope から検索 URL を組み立て・buildUrl/open を提供
+  templates.ts    # テンプレート型・組み込み 12 種・日付マクロ {{Nd}}・computeActiveTemplates
+  preferences.ts  # 表示モード / Scope / クイック検索の設定とクロース生成
+  storage.ts      # 検索入力欄の storage アイテム定義
   migrate.ts      # 旧 localStorage → chrome.storage の一回限り移行
 assets/
   global.css    # Tailwind v4 エントリ
