@@ -1,9 +1,11 @@
 import { useId, useState } from 'react';
+import { ScopeSelector } from '@/components/ScopeSelector';
 import { useStorage } from '@/hooks/useStorage';
 import { SEARCH_TYPES, type SearchType } from '@/lib/githubSearch';
 import {
   type DisplayMode,
   displayModeItem,
+  normalizeQuickSearch,
   type QuickSearchConfig,
   quickSearchItem,
   scopeOrgsItem,
@@ -12,13 +14,15 @@ import {
 } from '@/lib/preferences';
 import {
   generateCustomId,
+  isParameterized,
   mergeBuiltins,
   resetTemplatesToDefault,
   type Template,
+  type TemplateActivation,
   templatesItem,
 } from '@/lib/templates';
 
-type Tab = 'search' | 'settings';
+type Tab = 'search' | 'quick' | 'settings';
 
 export default function OptionsApp() {
   const [tab, setTab] = useState<Tab>('search');
@@ -27,7 +31,8 @@ export default function OptionsApp() {
   const [orgs, setOrgs] = useStorage(scopeOrgsItem);
   const [users, setUsers] = useStorage(scopeUsersItem);
   const [repos, setRepos] = useStorage(scopeReposItem);
-  const [quickSearch, setQuickSearch] = useStorage(quickSearchItem);
+  const [quickSearchRaw, setQuickSearch] = useStorage(quickSearchItem);
+  const quickSearch = normalizeQuickSearch(quickSearchRaw);
   const templates = mergeBuiltins(stored);
 
   const setEnabled = (id: string, enabled: boolean) => {
@@ -63,6 +68,7 @@ export default function OptionsApp() {
 
   const builtins = templates.filter((t) => t.builtin);
   const customs = templates.filter((t) => !t.builtin);
+  const enabledTemplates = templates.filter((t) => t.enabled);
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
@@ -75,7 +81,7 @@ export default function OptionsApp() {
           <>
             <Section title="Scope（検索範囲）">
               <p className="text-xs text-gray-400 mb-3">
-                コンマ区切りで複数指定可能。Side Panel の Scope ボタンで切り替えます。
+                コンマ区切りで複数指定可能。Side Panel やクイック検索の Scope モードで参照されます。
               </p>
               <ScopeInput label="Org" value={orgs} onChange={setOrgs} placeholder="apache,google" />
               <ScopeInput
@@ -144,23 +150,74 @@ export default function OptionsApp() {
           </>
         )}
 
-        {tab === 'settings' && (
+        {tab === 'quick' && (
           <>
-            <Section title="表示モード">
-              <DisplayModePicker value={displayMode} onChange={setDisplayMode} />
-            </Section>
-
             <Section title="クイック検索（コンテキストメニュー / オムニボックス）">
               <p className="text-xs text-gray-400 mb-3">
                 右クリック → "GitHub Search" や、アドレスバーで{' '}
                 <code className="px-1.5 py-0.5 rounded bg-gray-800 text-blue-300">
                   gse &lt;キーワード&gt;
                 </code>{' '}
-                を入力したときの挙動です。
+                を入力したときに使われる検索条件を、Side Panel とは独立して設定します。
               </p>
-              <QuickSearchEditor value={quickSearch} onChange={setQuickSearch} />
+              <QuickSearchTypeRow
+                value={quickSearch.searchType}
+                onChange={(searchType) => setQuickSearch({ ...quickSearch, searchType })}
+              />
+            </Section>
+
+            <Section title="Scope">
+              <p className="text-xs text-gray-400 mb-3">
+                クイック検索で使う検索範囲。Org / User / Repo
+                のリストは「検索オプション」タブの設定を参照します。
+              </p>
+              <ScopeSelector
+                value={quickSearch.scopeMode}
+                onChange={(scopeMode) => setQuickSearch({ ...quickSearch, scopeMode })}
+                orgs={orgs}
+                users={users}
+                repos={repos}
+                showLabel={false}
+              />
+            </Section>
+
+            <Section title="Templates">
+              <p className="text-xs text-gray-400 mb-3">
+                クイック検索でアクティブにするテンプレート。 Side Panel
+                のチップ状態とは独立に保存されます。
+              </p>
+              {enabledTemplates.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  「検索オプション」タブで有効化したテンプレートがここに表示されます。
+                </p>
+              ) : (
+                <ul className="divide-y divide-gray-800">
+                  {enabledTemplates.map((t) => (
+                    <QuickTemplateRow
+                      key={t.id}
+                      template={t}
+                      activation={quickSearch.templateActivations[t.id]}
+                      onChange={(next) =>
+                        setQuickSearch({
+                          ...quickSearch,
+                          templateActivations: {
+                            ...quickSearch.templateActivations,
+                            [t.id]: next,
+                          },
+                        })
+                      }
+                    />
+                  ))}
+                </ul>
+              )}
             </Section>
           </>
+        )}
+
+        {tab === 'settings' && (
+          <Section title="表示モード">
+            <DisplayModePicker value={displayMode} onChange={setDisplayMode} />
+          </Section>
         )}
       </div>
     </div>
@@ -170,6 +227,7 @@ export default function OptionsApp() {
 const Tabs = ({ current, onChange }: { current: Tab; onChange: (next: Tab) => void }) => {
   const tabs: Array<{ id: Tab; label: string }> = [
     { id: 'search', label: '検索オプション' },
+    { id: 'quick', label: 'クイック検索' },
     { id: 'settings', label: '設定' },
   ];
   return (
@@ -270,75 +328,78 @@ const DisplayModePicker = ({
   );
 };
 
-const QuickSearchEditor = ({
+const QuickSearchTypeRow = ({
   value,
   onChange,
 }: {
-  value: QuickSearchConfig;
-  onChange: (next: QuickSearchConfig) => void;
+  value: QuickSearchConfig['searchType'];
+  onChange: (next: SearchType) => void;
 }) => {
-  const typeId = useId();
+  const id = useId();
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <label htmlFor={typeId} className="w-24 text-sm text-gray-300 font-medium">
-          検索対象
-        </label>
-        <select
-          id={typeId}
-          value={value.searchType}
-          onChange={(e) => onChange({ ...value, searchType: e.target.value as SearchType })}
-          className="text-sm bg-gray-900 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-blue-400"
-        >
-          {SEARCH_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
-      <Toggle
-        label="Scope を適用"
-        hint="設定済みの Org / User / Repo モードを検索クエリに付与"
-        checked={value.applyScope}
-        onChange={(applyScope) => onChange({ ...value, applyScope })}
-      />
-      <Toggle
-        label="アクティブなテンプレートを適用"
-        hint="Side Panel でトグル ON のテンプレートを検索クエリに付与"
-        checked={value.applyTemplates}
-        onChange={(applyTemplates) => onChange({ ...value, applyTemplates })}
-      />
+    <div className="flex items-center gap-3">
+      <label htmlFor={id} className="w-24 text-sm text-gray-300 font-medium">
+        検索対象
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value as SearchType)}
+        className="text-sm bg-gray-900 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-blue-400"
+      >
+        {SEARCH_TYPES.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };
 
-const Toggle = ({
-  label,
-  hint,
-  checked,
+const QuickTemplateRow = ({
+  template,
+  activation,
   onChange,
 }: {
-  label: string;
-  hint?: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
+  template: Template;
+  activation: TemplateActivation | undefined;
+  onChange: (next: TemplateActivation) => void;
 }) => {
-  const id = useId();
+  const checkboxId = useId();
+  const valueId = useId();
+  const active = activation?.active ?? false;
+  const argValue = activation?.argValue ?? '';
+  const needsArg = isParameterized(template.pattern);
+  const missing = active && needsArg && argValue.trim() === '';
+
   return (
-    <label htmlFor={id} className="flex items-start gap-3 cursor-pointer">
+    <li className="flex items-center gap-3 py-2">
       <input
-        id={id}
+        id={checkboxId}
         type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 accent-blue-500"
+        checked={active}
+        onChange={(e) => onChange({ ...activation, active: e.target.checked })}
+        className="accent-blue-500"
       />
-      <div>
-        <div className="text-sm">{label}</div>
-        {hint && <div className="text-xs text-gray-400 mt-0.5">{hint}</div>}
-      </div>
-    </label>
+      <label htmlFor={checkboxId} className="flex-1 text-sm cursor-pointer">
+        <span className="font-medium">{template.name}</span>
+        {missing && <span className="ml-2 text-xs text-amber-400">⚠ 値が必要</span>}
+        <code className="ml-2 text-xs text-blue-300">{template.pattern}</code>
+      </label>
+      {needsArg && (
+        <input
+          id={valueId}
+          type="text"
+          value={argValue}
+          onChange={(e) => onChange({ active, argValue: e.target.value })}
+          placeholder="value"
+          disabled={!active}
+          aria-label={`${template.name} value`}
+          className="w-32 text-sm bg-gray-900 border border-gray-700 rounded px-2 py-1 font-mono focus:outline-none focus:border-blue-400 disabled:opacity-40"
+        />
+      )}
+    </li>
   );
 };
 

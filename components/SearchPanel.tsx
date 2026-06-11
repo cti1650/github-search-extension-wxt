@@ -34,7 +34,7 @@ export const SearchPanel = ({
   const [keyword] = useStorage(keywordItem);
   const [exclusionKeyword] = useStorage(exclusionKeywordItem);
   const [extensionKeyword] = useStorage(extensionKeywordItem);
-  const [scopeMode] = useStorage(scopeModeItem);
+  const [scopeMode, setScopeMode] = useStorage(scopeModeItem);
   const [orgs] = useStorage(scopeOrgsItem);
   const [users] = useStorage(scopeUsersItem);
   const [repos] = useStorage(scopeReposItem);
@@ -77,7 +77,15 @@ export const SearchPanel = ({
         placeholder="file extension keyword ( tsx,ts )"
         holder="search_file_extension_keyword"
       />
-      {showScope && <ScopeSelector orgs={orgs} users={users} repos={repos} />}
+      {showScope && (
+        <ScopeSelector
+          orgs={orgs}
+          users={users}
+          repos={repos}
+          value={scopeMode}
+          onChange={setScopeMode}
+        />
+      )}
       <Buttons
         label="Search Type"
         buttons={searchTypes.map((type) => ({

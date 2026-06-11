@@ -3,14 +3,13 @@ import {
   buildScopeClause,
   type DisplayMode,
   displayModeItem,
-  type QuickSearchConfig,
+  normalizeQuickSearch,
   quickSearchItem,
-  scopeModeItem,
   scopeOrgsItem,
   scopeReposItem,
   scopeUsersItem,
 } from '@/lib/preferences';
-import { mergeBuiltins, templateActivationsItem, templatesItem } from '@/lib/templates';
+import { mergeBuiltins, type TemplateActivation, templatesItem } from '@/lib/templates';
 
 export default defineBackground(() => {
   const CONTEXT_MENU_ID = 'github-search-extension';
@@ -54,9 +53,10 @@ export default defineBackground(() => {
     await applyDisplayMode(mode);
   };
 
-  const loadActiveTemplates = async (): Promise<ActiveTemplate[]> => {
+  const resolveActiveTemplates = async (
+    activations: Record<string, TemplateActivation>,
+  ): Promise<ActiveTemplate[]> => {
     const stored = await templatesItem.getValue();
-    const activations = await templateActivationsItem.getValue();
     const merged = mergeBuiltins(stored);
     const active: ActiveTemplate[] = [];
     for (const t of merged) {
@@ -68,26 +68,20 @@ export default defineBackground(() => {
     return active;
   };
 
-  const loadScopeClause = async (): Promise<string | null> => {
-    const [mode, orgs, users, repos] = await Promise.all([
-      scopeModeItem.getValue(),
+  /**
+   * Build a search URL for short-form entry points (context menu, omnibox).
+   * The QuickSearchConfig owns its own scopeMode and templateActivations,
+   * independent from the Side Panel state.
+   */
+  const buildQuickSearchUrl = async (keyword: string): Promise<string> => {
+    const config = normalizeQuickSearch(await quickSearchItem.getValue());
+    const [orgs, users, repos, templates] = await Promise.all([
       scopeOrgsItem.getValue(),
       scopeUsersItem.getValue(),
       scopeReposItem.getValue(),
+      resolveActiveTemplates(config.templateActivations),
     ]);
-    return buildScopeClause(mode, orgs, users, repos);
-  };
-
-  /**
-   * Build a search URL for short-form entry points (context menu, omnibox).
-   * The QuickSearchConfig decides which optional filters (scope, templates) apply.
-   */
-  const buildQuickSearchUrl = async (keyword: string): Promise<string> => {
-    const config: QuickSearchConfig = await quickSearchItem.getValue();
-    const [scopeClause, templates] = await Promise.all([
-      config.applyScope ? loadScopeClause() : Promise.resolve(null),
-      config.applyTemplates ? loadActiveTemplates() : Promise.resolve<ActiveTemplate[]>([]),
-    ]);
+    const scopeClause = buildScopeClause(config.scopeMode, orgs, users, repos);
     const { buildUrl } = buildGitHubSearch({
       keyword,
       exclusionKeyword: '',

@@ -12,8 +12,11 @@ Popup から検索条件を組み立てて新規タブで GitHub 検索を開く
 - **Templates**: GitHub qualifier をチップ化してトグル。`is:pr`, `npm Package`, `Pushed: last 30 days` などプリセット中心。カスタムテンプレートでは `%s`（ユーザー入力）と `{{Nd}}`（N 日前の日付に展開）が使用可能
 - **コンテキストメニュー**: ページ上で選択中のテキストを GitHub Search で開く（右クリック → "GitHub Search"）
 - **オムニボックス**: アドレスバーで `gse <キーワード>` → Enter で即検索
-- **クイック検索の設定**: コンテキストメニュー / オムニボックスの検索対象（Code/Repo/Issues/Commits/Advisory）、Scope の適用、Templates の適用を Options で切替可能
-- **Options ページ**: 新規タブで全面表示。**検索オプション**（Scope / 組み込み・カスタムテンプレート）と **設定**（表示モード / クイック検索）の 2 タブ
+- **クイック検索の設定**: コンテキストメニュー / オムニボックスの検索対象（Code/Repo/Issues/Commits/Advisory）、Scope モード、Templates アクティベーションを Side Panel とは **独立** に設定可能
+- **Options ページ**: 新規タブで全面表示。3 タブ構成
+  - **検索オプション**: Scope リスト（Org/User/Repo）、組み込み・カスタムテンプレートの ON/OFF
+  - **クイック検索**: コンテキストメニュー・オムニボックス専用の検索対象 / Scope モード / Templates 選択
+  - **設定**: 表示モード（Popup / Side Panel）
 - **ショートカット**: `Alt+G` で UI を開く（モードに応じて popup / sidepanel）
 - **入力値の保存**: 検索条件・テンプレート・Scope 設定・表示モード・クイック検索設定は `chrome.storage.local` に保存され、次回起動時に復元
 
@@ -74,11 +77,17 @@ Options ページの「カスタムテンプレート」セクションから追
 
 ### オムニボックス / コンテキストメニューでの即時検索
 
-Options → 設定タブの「クイック検索」で **検索対象 / Scope 適用 / Templates 適用** を設定:
+Options → **クイック検索** タブで以下を Side Panel と独立に設定:
 
-- アドレスバーで `gse react hooks` → Enter で `react hooks` をクイック検索
-- ページ上のコードを選択 → 右クリック → "GitHub Search" で選択テキストをクイック検索
-- 例: 検索対象を `Advisory` に、Scope 適用を ON にしておくと、選択した CVE 番号が常に自社 Org の Advisory として検索される
+- **検索対象**: Code / Repositories / Issues / Commits / Advisory から選択
+- **Scope**: All / Org / User / Repo （Org/User/Repo のリストは「検索オプション」タブの設定を参照）
+- **Templates**: 有効化済みテンプレートから個別にアクティブ化（`%s` 入力欄もここで指定）
+
+使い方:
+- アドレスバーで `gse react hooks` → Enter
+- ページ上のコードを選択 → 右クリック → "GitHub Search"
+
+例: 検索対象を `Advisory`、Scope を `Org`（自社 org）、Templates で `npm Package` をアクティブにしておくと、ページで選択した CVE 番号や依存名が常に自社 org の Advisory + npm 関連ファイル経由で検索される。
 
 ## 技術スタック
 

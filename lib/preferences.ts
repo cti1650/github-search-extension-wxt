@@ -1,5 +1,6 @@
 import { storage } from 'wxt/utils/storage';
 import type { SearchType } from './githubSearch';
+import type { TemplateActivation } from './templates';
 
 export type DisplayMode = 'popup' | 'sidepanel';
 
@@ -25,18 +26,33 @@ export const scopeReposItem = storage.defineItem<string>('local:scope_repos', { 
  * Configuration shared by the context menu and the omnibox.
  * Context menu uses the selected text as keyword.
  * Omnibox uses what the user typed after the `gse` keyword.
+ *
+ * scopeMode and templateActivations are independent from the Side Panel state —
+ * the user configures them explicitly in the クイック検索 tab.
  */
 export type QuickSearchConfig = {
   searchType: SearchType;
-  applyScope: boolean;
-  applyTemplates: boolean;
+  scopeMode: ScopeMode;
+  templateActivations: Record<string, TemplateActivation>;
 };
 
 export const DEFAULT_QUICK_SEARCH: QuickSearchConfig = {
   searchType: 'Code',
-  applyScope: false,
-  applyTemplates: false,
+  scopeMode: 'all',
+  templateActivations: {},
 };
+
+/**
+ * Storage may contain a config from a previous schema; fill in missing fields
+ * with defaults to keep callers simple.
+ */
+export const normalizeQuickSearch = (
+  raw: Partial<QuickSearchConfig> | undefined | null,
+): QuickSearchConfig => ({
+  searchType: raw?.searchType ?? DEFAULT_QUICK_SEARCH.searchType,
+  scopeMode: raw?.scopeMode ?? DEFAULT_QUICK_SEARCH.scopeMode,
+  templateActivations: raw?.templateActivations ?? DEFAULT_QUICK_SEARCH.templateActivations,
+});
 
 export const quickSearchItem = storage.defineItem<QuickSearchConfig>('local:quick_search', {
   fallback: DEFAULT_QUICK_SEARCH,

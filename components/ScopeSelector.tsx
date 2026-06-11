@@ -1,5 +1,4 @@
-import { useStorage } from '@/hooks/useStorage';
-import { SCOPE_MODES, type ScopeMode, scopeModeItem } from '@/lib/preferences';
+import { SCOPE_MODES, type ScopeMode } from '@/lib/preferences';
 
 const labels: Record<ScopeMode, string> = {
   all: 'All',
@@ -12,11 +11,12 @@ type Props = {
   orgs: string;
   users: string;
   repos: string;
+  value: ScopeMode;
+  onChange: (next: ScopeMode) => void;
+  showLabel?: boolean;
 };
 
-export const ScopeSelector = ({ orgs, users, repos }: Props) => {
-  const [mode, setMode] = useStorage(scopeModeItem);
-
+export const ScopeSelector = ({ orgs, users, repos, value, onChange, showLabel = true }: Props) => {
   const sourceByMode: Record<ScopeMode, string> = {
     all: '',
     org: orgs,
@@ -26,16 +26,16 @@ export const ScopeSelector = ({ orgs, users, repos }: Props) => {
 
   return (
     <>
-      <div className="mt-3 mb-0.5 text-gray-400 text-xs">Scope</div>
+      {showLabel && <div className="mt-3 mb-0.5 text-gray-400 text-xs">Scope</div>}
       <div className="grid grid-cols-4 gap-1">
         {SCOPE_MODES.map((m) => {
-          const active = m === mode;
+          const active = m === value;
           const hasValue = m === 'all' || sourceByMode[m].trim() !== '';
           return (
             <button
               key={m}
               type="button"
-              onClick={() => setMode(m)}
+              onClick={() => onChange(m)}
               title={
                 m === 'all'
                   ? 'GitHub 全体を検索'
