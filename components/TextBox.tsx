@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, KeyboardEvent } from 'react';
 import { useId } from 'react';
 import { useStorage } from '@/hooks/useStorage';
 import { storageItemByHolder } from '@/lib/storage';
@@ -8,9 +8,10 @@ type Props = {
   placeholder?: string;
   holder: keyof typeof storageItemByHolder;
   onChange?: (value: string) => void;
+  onSubmit?: () => void;
 };
 
-export const TextBox = ({ label, placeholder, holder, onChange }: Props) => {
+export const TextBox = ({ label, placeholder, holder, onChange, onSubmit }: Props) => {
   const item = storageItemByHolder[holder];
   const [value, setValue] = useStorage(item);
   const inputId = useId();
@@ -19,6 +20,14 @@ export const TextBox = ({ label, placeholder, holder, onChange }: Props) => {
     const next = event.target.value;
     setValue(next);
     onChange?.(next);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return;
+    if (event.nativeEvent.isComposing) return; // skip while IME is composing
+    if (!onSubmit) return;
+    event.preventDefault();
+    onSubmit();
   };
 
   return (
@@ -32,6 +41,7 @@ export const TextBox = ({ label, placeholder, holder, onChange }: Props) => {
           type="text"
           placeholder={placeholder ?? ''}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
           value={value ?? ''}
           className="w-full px-4 py-1 text-white focus:text-black rounded-lg border border-gray-600 bg-gray-800 focus:bg-gray-200 focus:outline-none"
         />

@@ -3,10 +3,16 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react', '@wxt-dev/auto-icons'],
-  manifest: {
+  manifest: ({ browser }) => ({
     name: 'GitHub Search Extension',
     description: 'GitHub Search Extension',
-    permissions: ['contextMenus', 'activeTab', 'storage'],
+    permissions: [
+      'contextMenus',
+      'activeTab',
+      'storage',
+      'scripting',
+      ...(browser === 'chrome' ? ['sidePanel'] : []),
+    ],
     action: {
       default_title: 'GitHub Search Extension',
     },
@@ -17,8 +23,18 @@ export default defineConfig({
           mac: 'Alt+G',
         },
       },
+      'search-selection': {
+        description: 'Search the current page selection on GitHub',
+        suggested_key: {
+          default: 'Alt+Shift+G',
+          mac: 'Alt+Shift+G',
+        },
+      },
     },
-  },
+    omnibox: {
+      keyword: 'gse',
+    },
+  }),
   vite: () => ({
     plugins: [tailwindcss()],
   }),
