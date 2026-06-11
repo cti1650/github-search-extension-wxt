@@ -22,10 +22,10 @@ import {
   templatesItem,
 } from '@/lib/templates';
 
-type Tab = 'search' | 'quick' | 'settings';
+type Tab = 'quick' | 'search' | 'settings';
 
 export default function OptionsApp() {
-  const [tab, setTab] = useState<Tab>('search');
+  const [tab, setTab] = useState<Tab>('quick');
   const [stored, setStored] = useStorage(templatesItem);
   const [displayMode, setDisplayMode] = useStorage(displayModeItem);
   const [orgs, setOrgs] = useStorage(scopeOrgsItem);
@@ -226,8 +226,8 @@ export default function OptionsApp() {
 
 const Tabs = ({ current, onChange }: { current: Tab; onChange: (next: Tab) => void }) => {
   const tabs: Array<{ id: Tab; label: string }> = [
-    { id: 'search', label: '検索オプション' },
     { id: 'quick', label: 'クイック検索' },
+    { id: 'search', label: '検索オプション' },
     { id: 'settings', label: '設定' },
   ];
   return (
