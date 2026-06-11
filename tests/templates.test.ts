@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILTIN_TEMPLATES,
+  computeActiveTemplates,
   DEFAULT_TEMPLATES,
   expandDateMacros,
   generateCustomId,
@@ -102,6 +103,41 @@ describe('mergeBuiltins', () => {
     const myCustom = custom('custom:abc', 'My Template');
     const merged = mergeBuiltins([...DEFAULT_TEMPLATES, myCustom]);
     expect(merged[merged.length - 1]).toEqual(myCustom);
+  });
+});
+
+describe('computeActiveTemplates', () => {
+  const tpl = (id: string, pattern: string, enabled = true): Template => ({
+    id,
+    name: id,
+    pattern,
+    enabled,
+    builtin: false,
+  });
+
+  it('returns only templates that are both enabled and active', () => {
+    const templates = [tpl('a', 'is:pr'), tpl('b', 'is:issue', false), tpl('c', 'is:merged')];
+    const activations = {
+      a: { active: true },
+      b: { active: true }, // not enabled → skipped
+      c: { active: false }, // not active → skipped
+    };
+    expect(computeActiveTemplates(templates, activations)).toEqual([
+      { pattern: 'is:pr', argValue: undefined },
+    ]);
+  });
+
+  it('carries through argValue for parameterized patterns', () => {
+    const templates = [tpl('a', 'org:%s')];
+    const activations = { a: { active: true, argValue: 'apache' } };
+    expect(computeActiveTemplates(templates, activations)).toEqual([
+      { pattern: 'org:%s', argValue: 'apache' },
+    ]);
+  });
+
+  it('returns an empty list when nothing is active', () => {
+    const templates = [tpl('a', 'is:pr')];
+    expect(computeActiveTemplates(templates, {})).toEqual([]);
   });
 });
 

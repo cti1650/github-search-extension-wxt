@@ -1,16 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useMemo } from 'react';
 import { Buttons } from '@/components/Buttons';
 import { Layout } from '@/components/Layout';
 import { ScopeSelector } from '@/components/ScopeSelector';
 import { TemplateChips } from '@/components/TemplateChips';
 import { TextBox } from '@/components/TextBox';
 import { useStorage } from '@/hooks/useStorage';
-import {
-  type ActiveTemplate,
-  buildGitHubSearch,
-  SEARCH_TYPES,
-  type SearchType,
-} from '@/lib/githubSearch';
+import { buildGitHubSearch, SEARCH_TYPES, type SearchType } from '@/lib/githubSearch';
 import {
   buildScopeClause,
   scopeModeItem,
@@ -19,6 +14,12 @@ import {
   scopeUsersItem,
 } from '@/lib/preferences';
 import { exclusionKeywordItem, extensionKeywordItem, keywordItem } from '@/lib/storage';
+import {
+  computeActiveTemplates,
+  mergeBuiltins,
+  templateActivationsItem,
+  templatesItem,
+} from '@/lib/templates';
 
 type Props = {
   searchTypes?: readonly SearchType[];
@@ -38,7 +39,14 @@ export const SearchPanel = ({
   const [orgs] = useStorage(scopeOrgsItem);
   const [users] = useStorage(scopeUsersItem);
   const [repos] = useStorage(scopeReposItem);
-  const [activeTemplates, setActiveTemplates] = useState<ActiveTemplate[]>([]);
+  const [storedTemplates] = useStorage(templatesItem);
+  const [activations] = useStorage(templateActivationsItem);
+
+  // Derive active templates directly from storage — stays in sync across contexts.
+  const activeTemplates = useMemo(
+    () => computeActiveTemplates(mergeBuiltins(storedTemplates), activations),
+    [storedTemplates, activations],
+  );
 
   const handleClick = (label: string) => {
     const scopeClause = showScope ? buildScopeClause(scopeMode, orgs, users, repos) : null;
@@ -55,10 +63,6 @@ export const SearchPanel = ({
   const openOptions = () => {
     void browser.runtime.openOptionsPage();
   };
-
-  const handleActivationChange = useCallback((next: ActiveTemplate[]) => {
-    setActiveTemplates(next);
-  }, []);
 
   return (
     <Layout title="GitHub Search Extension">
@@ -105,7 +109,7 @@ export const SearchPanel = ({
               Manage ⚙
             </button>
           </div>
-          <TemplateChips onActivationChange={handleActivationChange} />
+          <TemplateChips />
         </>
       )}
       {!showScope && !showTemplates && (

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useStorage } from '@/hooks/useStorage';
-import type { ActiveTemplate } from '@/lib/githubSearch';
 import {
   isParameterized,
   mergeBuiltins,
@@ -10,11 +9,7 @@ import {
   templatesItem,
 } from '@/lib/templates';
 
-type Props = {
-  onActivationChange?: (active: ActiveTemplate[]) => void;
-};
-
-export const TemplateChips = ({ onActivationChange }: Props) => {
+export const TemplateChips = () => {
   const [stored, setStored] = useStorage(templatesItem);
   const [activations, setActivations] = useStorage(templateActivationsItem);
   const [reconciled, setReconciled] = useState(false);
@@ -30,17 +25,6 @@ export const TemplateChips = ({ onActivationChange }: Props) => {
   }, [reconciled, stored, setStored]);
 
   const visible = stored.filter((t) => t.enabled);
-
-  useEffect(() => {
-    if (!onActivationChange) return;
-    const active: ActiveTemplate[] = [];
-    for (const t of visible) {
-      const state = activations[t.id];
-      if (!state?.active) continue;
-      active.push({ pattern: t.pattern, argValue: state.argValue });
-    }
-    onActivationChange(active);
-  }, [visible, activations, onActivationChange]);
 
   if (visible.length === 0) {
     return (

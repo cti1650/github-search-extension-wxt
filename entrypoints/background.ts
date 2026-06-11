@@ -9,7 +9,12 @@ import {
   scopeReposItem,
   scopeUsersItem,
 } from '@/lib/preferences';
-import { mergeBuiltins, type TemplateActivation, templatesItem } from '@/lib/templates';
+import {
+  computeActiveTemplates,
+  mergeBuiltins,
+  type TemplateActivation,
+  templatesItem,
+} from '@/lib/templates';
 
 export default defineBackground(() => {
   const CONTEXT_MENU_ID = 'github-search-extension';
@@ -57,15 +62,7 @@ export default defineBackground(() => {
     activations: Record<string, TemplateActivation>,
   ): Promise<ActiveTemplate[]> => {
     const stored = await templatesItem.getValue();
-    const merged = mergeBuiltins(stored);
-    const active: ActiveTemplate[] = [];
-    for (const t of merged) {
-      if (!t.enabled) continue;
-      const state = activations[t.id];
-      if (!state?.active) continue;
-      active.push({ pattern: t.pattern, argValue: state.argValue });
-    }
-    return active;
+    return computeActiveTemplates(mergeBuiltins(stored), activations);
   };
 
   /**

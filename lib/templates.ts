@@ -100,3 +100,21 @@ export const mergeBuiltins = (stored: Template[]): Template[] => {
 };
 
 export const generateCustomId = (): string => `custom:${crypto.randomUUID()}`;
+
+/**
+ * Compute the list of templates that are both enabled (visible) and active
+ * (toggled on in the panel/quick search activations).
+ */
+export const computeActiveTemplates = (
+  templates: Template[],
+  activations: Record<string, TemplateActivation>,
+): Array<{ pattern: string; argValue?: string }> => {
+  const result: Array<{ pattern: string; argValue?: string }> = [];
+  for (const t of templates) {
+    if (!t.enabled) continue;
+    const state = activations[t.id];
+    if (!state?.active) continue;
+    result.push({ pattern: t.pattern, argValue: state.argValue });
+  }
+  return result;
+};
