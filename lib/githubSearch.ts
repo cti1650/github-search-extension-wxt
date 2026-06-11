@@ -83,10 +83,12 @@ export const buildGitHubSearch = (props: Props) => {
   const rawQuery = [scopeClause ?? '', templatePrefix, baseKeywords].filter((v) => v).join(' ');
   const searchKeywordQuery = encodeURIComponent(rawQuery);
 
+  const buildUrl = (type: SearchType): string =>
+    SEARCH_URL_BUILDERS[type](searchKeywordQuery.trim());
+
   const open = (type: SearchType) => {
-    const query = searchKeywordQuery.trim();
-    window.open(SEARCH_URL_BUILDERS[type](query), '_blank');
+    window.open(buildUrl(type), '_blank');
   };
 
-  return { open, rawQuery };
+  return { open, buildUrl, rawQuery };
 };

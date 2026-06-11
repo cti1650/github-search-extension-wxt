@@ -22,9 +22,15 @@ import { exclusionKeywordItem, extensionKeywordItem, keywordItem } from '@/lib/s
 
 type Props = {
   searchTypes?: readonly SearchType[];
+  showScope?: boolean;
+  showTemplates?: boolean;
 };
 
-export const SearchPanel = ({ searchTypes = SEARCH_TYPES }: Props) => {
+export const SearchPanel = ({
+  searchTypes = SEARCH_TYPES,
+  showScope = true,
+  showTemplates = true,
+}: Props) => {
   const [keyword] = useStorage(keywordItem);
   const [exclusionKeyword] = useStorage(exclusionKeywordItem);
   const [extensionKeyword] = useStorage(extensionKeywordItem);
@@ -35,12 +41,12 @@ export const SearchPanel = ({ searchTypes = SEARCH_TYPES }: Props) => {
   const [activeTemplates, setActiveTemplates] = useState<ActiveTemplate[]>([]);
 
   const handleClick = (label: string) => {
-    const scopeClause = buildScopeClause(scopeMode, orgs, users, repos);
+    const scopeClause = showScope ? buildScopeClause(scopeMode, orgs, users, repos) : null;
     const { open } = buildGitHubSearch({
       keyword,
       exclusionKeyword,
       extensionKeyword,
-      templates: activeTemplates,
+      templates: showTemplates ? activeTemplates : [],
       scopeClause,
     });
     open(label as SearchType);
@@ -71,7 +77,7 @@ export const SearchPanel = ({ searchTypes = SEARCH_TYPES }: Props) => {
         placeholder="file extension keyword ( tsx,ts )"
         holder="search_file_extension_keyword"
       />
-      <ScopeSelector orgs={orgs} users={users} repos={repos} />
+      {showScope && <ScopeSelector orgs={orgs} users={users} repos={repos} />}
       <Buttons
         label="Search Type"
         buttons={searchTypes.map((type) => ({
@@ -79,17 +85,32 @@ export const SearchPanel = ({ searchTypes = SEARCH_TYPES }: Props) => {
           onClick: handleClick,
         }))}
       />
-      <div className="mt-3 flex justify-between items-center">
-        <span className="text-gray-400 text-xs">Templates</span>
-        <button
-          type="button"
-          onClick={openOptions}
-          className="text-gray-400 hover:text-blue-400 text-xs focus:outline-none"
-        >
-          Manage ⚙
-        </button>
-      </div>
-      <TemplateChips onActivationChange={handleActivationChange} />
+      {showTemplates && (
+        <>
+          <div className="mt-3 flex justify-between items-center">
+            <span className="text-gray-400 text-xs">Templates</span>
+            <button
+              type="button"
+              onClick={openOptions}
+              className="text-gray-400 hover:text-blue-400 text-xs focus:outline-none"
+            >
+              Manage ⚙
+            </button>
+          </div>
+          <TemplateChips onActivationChange={handleActivationChange} />
+        </>
+      )}
+      {!showScope && !showTemplates && (
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            onClick={openOptions}
+            className="text-gray-400 hover:text-blue-400 text-xs focus:outline-none"
+          >
+            Options ⚙
+          </button>
+        </div>
+      )}
     </Layout>
   );
 };

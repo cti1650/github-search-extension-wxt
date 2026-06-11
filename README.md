@@ -5,15 +5,17 @@ Popup から検索条件を組み立てて新規タブで GitHub 検索を開く
 
 ## 機能
 
-- **Popup**: `Code` / `Repositories` の 2 種から検索（コンパクトな日常用途）
-- **Side Panel**: `Code` / `Repositories` / `Issues` / `Commits` / `Advisory` の全 5 種から検索（CVE 調査・横断調査向け）
+- **Popup**: Keyword / Exclusion / File + `Code` / `Repositories` のミニマル構成（日常用途）
+- **Side Panel**: Popup の全機能 + Scope セレクタ + Templates チップ + `Issues` / `Commits` / `Advisory` ボタン（CVE 調査・横断調査向け）
 - **表示モード切替**: Options ページから Popup / Side Panel を選択（Chrome は Side Panel、Firefox は Sidebar に自動マップ）
-- **Scope**: Org / User / Repo をコンマ区切りで事前登録 → Panel の `All` / `Org` / `User` / `Repo` ボタンで検索範囲を切替
-- **Templates**: GitHub qualifier をチップ化してトグル。`is:pr`, `Lockfile`, `Pushed: last 30 days` などプリセット中心。カスタムテンプレートでは `%s`（ユーザー入力）と `{{Nd}}`（N 日前の日付に展開）が使用可能
-- **Options ページ**: 新規タブで全面表示。表示モード / Scope リスト / 組み込みテンプレートの ON/OFF / カスタムテンプレートの追加・編集・削除
-- **Context Menu**: ページ上で選択中のテキストを GitHub Code Search で開く（右クリック → "GitHub Code Search"）
+- **Scope**: Org / User / Repo をコンマ区切りで事前登録 → Side Panel の `All` / `Org` / `User` / `Repo` ボタンで検索範囲を即時切替
+- **Templates**: GitHub qualifier をチップ化してトグル。`is:pr`, `npm Package`, `Pushed: last 30 days` などプリセット中心。カスタムテンプレートでは `%s`（ユーザー入力）と `{{Nd}}`（N 日前の日付に展開）が使用可能
+- **コンテキストメニュー**: ページ上で選択中のテキストを GitHub Search で開く（右クリック → "GitHub Search"）
+- **オムニボックス**: アドレスバーで `gse <キーワード>` → Enter で即検索
+- **クイック検索の設定**: コンテキストメニュー / オムニボックスの検索対象（Code/Repo/Issues/Commits/Advisory）、Scope の適用、Templates の適用を Options で切替可能
+- **Options ページ**: 新規タブで全面表示。**検索オプション**（Scope / 組み込み・カスタムテンプレート）と **設定**（表示モード / クイック検索）の 2 タブ
 - **ショートカット**: `Alt+G` で UI を開く（モードに応じて popup / sidepanel）
-- **入力値の保存**: 検索条件・テンプレート・Scope 設定・表示モードは `chrome.storage.local` に保存され、次回起動時に復元
+- **入力値の保存**: 検索条件・テンプレート・Scope 設定・表示モード・クイック検索設定は `chrome.storage.local` に保存され、次回起動時に復元
 
 ## 検索クエリの組み立て
 
@@ -65,10 +67,18 @@ Options ページの「カスタムテンプレート」セクションから追
 
 ### CVE 調査の例
 
-1. Side Panel モードに切替（Options より）
-2. Options で `Org = mycompany` を登録 → Scope を `Org` に
+1. Options → 設定タブで Side Panel モードに切替
+2. Options → 検索オプションタブで `Org = mycompany` を登録 → Side Panel で Scope を `Org` に
 3. テンプレート `npm Package` を有効化、Keyword に `lodash` → `Code` で社内依存を調査
 4. Keyword に `CVE-2025-12345` を入力 → `Advisory` ボタンで GitHub Security Advisory DB を検索
+
+### オムニボックス / コンテキストメニューでの即時検索
+
+Options → 設定タブの「クイック検索」で **検索対象 / Scope 適用 / Templates 適用** を設定:
+
+- アドレスバーで `gse react hooks` → Enter で `react hooks` をクイック検索
+- ページ上のコードを選択 → 右クリック → "GitHub Search" で選択テキストをクイック検索
+- 例: 検索対象を `Advisory` に、Scope 適用を ON にしておくと、選択した CVE 番号が常に自社 Org の Advisory として検索される
 
 ## 技術スタック
 

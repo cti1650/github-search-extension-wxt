@@ -1,8 +1,11 @@
 import { useId, useState } from 'react';
 import { useStorage } from '@/hooks/useStorage';
+import { SEARCH_TYPES, type SearchType } from '@/lib/githubSearch';
 import {
   type DisplayMode,
   displayModeItem,
+  type QuickSearchConfig,
+  quickSearchItem,
   scopeOrgsItem,
   scopeReposItem,
   scopeUsersItem,
@@ -15,12 +18,16 @@ import {
   templatesItem,
 } from '@/lib/templates';
 
+type Tab = 'search' | 'settings';
+
 export default function OptionsApp() {
+  const [tab, setTab] = useState<Tab>('search');
   const [stored, setStored] = useStorage(templatesItem);
   const [displayMode, setDisplayMode] = useStorage(displayModeItem);
   const [orgs, setOrgs] = useStorage(scopeOrgsItem);
   const [users, setUsers] = useStorage(scopeUsersItem);
   const [repos, setRepos] = useStorage(scopeReposItem);
+  const [quickSearch, setQuickSearch] = useStorage(quickSearchItem);
   const templates = mergeBuiltins(stored);
 
   const setEnabled = (id: string, enabled: boolean) => {
@@ -62,91 +69,131 @@ export default function OptionsApp() {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">GitHub Search Extension — Options</h1>
 
-        <Section title="使い方">
-          <p className="text-sm text-gray-300 leading-relaxed">
-            <b>テンプレート</b>は検索クエリに付与する GitHub qualifier をチップ化したものです。
-            アクティブなチップが既存の Keyword / Exclusion / File と AND 連結されます。
-            <br />
-            <b>Scope</b> は事前に登録した Org / User / Repo
-            のリストから、検索範囲を切り替える機能です。 ボタンで All / Org / User / Repo
-            を選ぶだけで検索範囲が変わります。
-            <br />
-            <b>カスタムテンプレート</b>では{' '}
-            <code className="mx-1 px-1.5 py-0.5 rounded bg-gray-800 text-blue-300">%s</code>{' '}
-            プレースホルダや
-            <code className="mx-1 px-1.5 py-0.5 rounded bg-gray-800 text-blue-300">{'{{Nd}}'}</code>
-            （N 日前の日付に展開）を利用できます。
-          </p>
-        </Section>
+        <Tabs current={tab} onChange={setTab} />
 
-        <Section title="表示モード">
-          <DisplayModePicker value={displayMode} onChange={setDisplayMode} />
-        </Section>
-
-        <Section title="Scope（検索範囲）">
-          <p className="text-xs text-gray-400 mb-3">
-            コンマ区切りで複数指定可能。Popup / Side Panel の Scope ボタンで切り替えます。
-          </p>
-          <ScopeInput label="Org" value={orgs} onChange={setOrgs} placeholder="apache,google" />
-          <ScopeInput
-            label="User"
-            value={users}
-            onChange={setUsers}
-            placeholder="torvalds,gaearon"
-          />
-          <ScopeInput
-            label="Repo"
-            value={repos}
-            onChange={setRepos}
-            placeholder="vercel/next.js,facebook/react"
-          />
-        </Section>
-
-        <Section
-          title="組み込みテンプレート"
-          right={
-            <button
-              type="button"
-              onClick={resetBuiltins}
-              className="text-xs text-amber-300 hover:text-amber-200 focus:outline-none"
-            >
-              初期化
-            </button>
-          }
-        >
-          <ul className="divide-y divide-gray-800">
-            {builtins.map((t) => (
-              <BuiltinRow
-                key={t.id}
-                template={t}
-                onToggle={(enabled) => setEnabled(t.id, enabled)}
+        {tab === 'search' && (
+          <>
+            <Section title="Scope（検索範囲）">
+              <p className="text-xs text-gray-400 mb-3">
+                コンマ区切りで複数指定可能。Side Panel の Scope ボタンで切り替えます。
+              </p>
+              <ScopeInput label="Org" value={orgs} onChange={setOrgs} placeholder="apache,google" />
+              <ScopeInput
+                label="User"
+                value={users}
+                onChange={setUsers}
+                placeholder="torvalds,gaearon"
               />
-            ))}
-          </ul>
-        </Section>
+              <ScopeInput
+                label="Repo"
+                value={repos}
+                onChange={setRepos}
+                placeholder="vercel/next.js,facebook/react"
+              />
+            </Section>
 
-        <Section title="カスタムテンプレート">
-          {customs.length === 0 ? (
-            <p className="text-sm text-gray-500">まだカスタムテンプレートはありません</p>
-          ) : (
-            <ul className="divide-y divide-gray-800">
-              {customs.map((t) => (
-                <CustomRow
-                  key={t.id}
-                  template={t}
-                  onToggle={(enabled) => setEnabled(t.id, enabled)}
-                  onUpdate={(patch) => updateTemplate(t.id, patch)}
-                  onRemove={() => removeTemplate(t.id)}
-                />
-              ))}
-            </ul>
-          )}
-          <AddTemplateForm onAdd={addTemplate} />
-        </Section>
+            <Section
+              title="組み込みテンプレート"
+              right={
+                <button
+                  type="button"
+                  onClick={resetBuiltins}
+                  className="text-xs text-amber-300 hover:text-amber-200 focus:outline-none"
+                >
+                  初期化
+                </button>
+              }
+            >
+              <ul className="divide-y divide-gray-800">
+                {builtins.map((t) => (
+                  <BuiltinRow
+                    key={t.id}
+                    template={t}
+                    onToggle={(enabled) => setEnabled(t.id, enabled)}
+                  />
+                ))}
+              </ul>
+            </Section>
+
+            <Section title="カスタムテンプレート">
+              <p className="text-xs text-gray-400 mb-3">
+                <code className="px-1.5 py-0.5 rounded bg-gray-800 text-blue-300">%s</code>{' '}
+                プレースホルダや
+                <code className="mx-1 px-1.5 py-0.5 rounded bg-gray-800 text-blue-300">
+                  {'{{Nd}}'}
+                </code>
+                （N 日前の日付に展開）が利用できます。
+              </p>
+              {customs.length === 0 ? (
+                <p className="text-sm text-gray-500">まだカスタムテンプレートはありません</p>
+              ) : (
+                <ul className="divide-y divide-gray-800">
+                  {customs.map((t) => (
+                    <CustomRow
+                      key={t.id}
+                      template={t}
+                      onToggle={(enabled) => setEnabled(t.id, enabled)}
+                      onUpdate={(patch) => updateTemplate(t.id, patch)}
+                      onRemove={() => removeTemplate(t.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+              <AddTemplateForm onAdd={addTemplate} />
+            </Section>
+          </>
+        )}
+
+        {tab === 'settings' && (
+          <>
+            <Section title="表示モード">
+              <DisplayModePicker value={displayMode} onChange={setDisplayMode} />
+            </Section>
+
+            <Section title="クイック検索（コンテキストメニュー / オムニボックス）">
+              <p className="text-xs text-gray-400 mb-3">
+                右クリック → "GitHub Search" や、アドレスバーで{' '}
+                <code className="px-1.5 py-0.5 rounded bg-gray-800 text-blue-300">
+                  gse &lt;キーワード&gt;
+                </code>{' '}
+                を入力したときの挙動です。
+              </p>
+              <QuickSearchEditor value={quickSearch} onChange={setQuickSearch} />
+            </Section>
+          </>
+        )}
       </div>
     </div>
   );
 }
+
+const Tabs = ({ current, onChange }: { current: Tab; onChange: (next: Tab) => void }) => {
+  const tabs: Array<{ id: Tab; label: string }> = [
+    { id: 'search', label: '検索オプション' },
+    { id: 'settings', label: '設定' },
+  ];
+  return (
+    <div className="flex border-b border-gray-800 mb-6">
+      {tabs.map((t) => {
+        const active = current === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className={`px-4 py-2 text-sm font-medium focus:outline-none border-b-2 ${
+              active
+                ? 'border-blue-400 text-blue-300'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
 
 const ScopeInput = ({
   label,
@@ -220,6 +267,78 @@ const DisplayModePicker = ({
         );
       })}
     </div>
+  );
+};
+
+const QuickSearchEditor = ({
+  value,
+  onChange,
+}: {
+  value: QuickSearchConfig;
+  onChange: (next: QuickSearchConfig) => void;
+}) => {
+  const typeId = useId();
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <label htmlFor={typeId} className="w-24 text-sm text-gray-300 font-medium">
+          検索対象
+        </label>
+        <select
+          id={typeId}
+          value={value.searchType}
+          onChange={(e) => onChange({ ...value, searchType: e.target.value as SearchType })}
+          className="text-sm bg-gray-900 border border-gray-700 rounded px-2 py-1 focus:outline-none focus:border-blue-400"
+        >
+          {SEARCH_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
+      <Toggle
+        label="Scope を適用"
+        hint="設定済みの Org / User / Repo モードを検索クエリに付与"
+        checked={value.applyScope}
+        onChange={(applyScope) => onChange({ ...value, applyScope })}
+      />
+      <Toggle
+        label="アクティブなテンプレートを適用"
+        hint="Side Panel でトグル ON のテンプレートを検索クエリに付与"
+        checked={value.applyTemplates}
+        onChange={(applyTemplates) => onChange({ ...value, applyTemplates })}
+      />
+    </div>
+  );
+};
+
+const Toggle = ({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) => {
+  const id = useId();
+  return (
+    <label htmlFor={id} className="flex items-start gap-3 cursor-pointer">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 accent-blue-500"
+      />
+      <div>
+        <div className="text-sm">{label}</div>
+        {hint && <div className="text-xs text-gray-400 mt-0.5">{hint}</div>}
+      </div>
+    </label>
   );
 };
 

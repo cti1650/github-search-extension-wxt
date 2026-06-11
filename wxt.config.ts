@@ -23,6 +23,9 @@ export default defineConfig({
         },
       },
     },
+    omnibox: {
+      keyword: 'gse',
+    },
   }),
   vite: () => ({
     plugins: [tailwindcss()],

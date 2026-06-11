@@ -158,4 +158,22 @@ describe('buildGitHubSearch', () => {
       );
     });
   });
+
+  describe('buildUrl', () => {
+    it('returns the search URL without opening a window', () => {
+      const { buildUrl } = buildGitHubSearch({
+        keyword: 'react',
+        exclusionKeyword: '',
+        extensionKeyword: '',
+        templates: [{ pattern: 'is:pr' }],
+        scopeClause: 'org:apache',
+      });
+      expect(decodeURIComponent(buildUrl('Code'))).toBe(
+        'https://github.com/search?type=code&q=org:apache is:pr react',
+      );
+      expect(decodeURIComponent(buildUrl('Advisory'))).toBe(
+        'https://github.com/advisories?query=org:apache is:pr react',
+      );
+    });
+  });
 });
