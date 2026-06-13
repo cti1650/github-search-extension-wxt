@@ -8,8 +8,8 @@ const EXTENSION_PATH = path.resolve(__dirname, '../../.output/chrome-mv3');
 const OUT_DIR = path.resolve(__dirname, '../../screenshots');
 const SIZE = { width: 1280, height: 800 } as const;
 const BASE_URL = 'https://github.com/explore';
-
 const MANIFEST_PATH = path.join(EXTENSION_PATH, 'manifest.json');
+const MOCKUP_FILES = ['mockup.html', 'mockup.js'] as const;
 
 let context: BrowserContext;
 let extensionId: string;
@@ -19,16 +19,22 @@ test.describe.configure({ mode: 'serial' });
 test.beforeAll(async () => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  // Patch the built manifest in-place so the extension's popup/sidepanel pages
-  // can be iframed from regular web pages. This only touches .output (gitignored,
-  // rebuilt next run); the source manifest in wxt.config.ts is untouched so
-  // production builds stay locked down.
+  // Allow popup/sidepanel/mockup pages to be iframed from any origin (only
+  // patches .output, which is gitignored; production manifest stays untouched).
   const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
   manifest.web_accessible_resources = [
     ...(manifest.web_accessible_resources ?? []),
-    { resources: ['popup.html', 'sidepanel.html'], matches: ['<all_urls>'] },
+    {
+      resources: ['popup.html', 'sidepanel.html', 'mockup.html'],
+      matches: ['<all_urls>'],
+    },
   ];
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+
+  // Copy the mockup chrome (host page that frames github + the extension UI).
+  for (const f of MOCKUP_FILES) {
+    fs.copyFileSync(path.resolve(__dirname, f), path.join(EXTENSION_PATH, f));
+  }
 
   context = await chromium.launchPersistentContext('', {
     channel: 'chromium',
@@ -55,97 +61,74 @@ test.afterAll(async () => {
     }
   }
   fs.rmSync(path.join(OUT_DIR, '.playwright-output'), { recursive: true, force: true });
-});
-
-const SIDEPANEL_WIDTH = 420;
-
-const OVERLAY_STYLE = {
-  popup: [
-    'position:fixed',
-    'top:0',
-    'right:8px',
-    'width:392px',
-    'height:332px',
-    'border:0',
-    'border-radius:0 0 8px 8px',
-    'box-shadow:0 12px 32px rgba(0,0,0,0.5)',
-    'z-index:2147483647',
-    'background:#1f2937',
-  ].join(';'),
-  sidepanel: [
-    'position:fixed',
-    'top:0',
-    'right:0',
-    `width:${SIDEPANEL_WIDTH}px`,
-    'height:100dvh',
-    'border:0',
-    'box-shadow:-6px 0 24px rgba(0,0,0,0.5)',
-    'z-index:2147483647',
-    'background:#1f2937',
-  ].join(';'),
-} as const;
-
-async function mountOverlay(page: Page, mode: 'popup' | 'sidepanel'): Promise<Frame> {
-  if (mode === 'sidepanel') {
-    // Mimic Chrome's Side Panel docking: shrink the backdrop page horizontally
-    // so the panel sits beside the content instead of on top of it.
-    await page.addStyleTag({
-      content: `
-        html, body {
-          width: calc(100vw - ${SIDEPANEL_WIDTH}px) !important;
-          max-width: calc(100vw - ${SIDEPANEL_WIDTH}px) !important;
-          overflow-x: hidden !important;
-        }
-      `,
-    });
-    await page.waitForTimeout(500);
+  for (const f of MOCKUP_FILES) {
+    fs.rmSync(path.join(EXTENSION_PATH, f), { force: true });
   }
-
-  const extPage = mode === 'popup' ? 'popup.html' : 'sidepanel.html';
-  await page.evaluate(
-    ({ extId, extPage, style }) => {
-      const iframe = document.createElement('iframe');
-      iframe.id = 'gse-overlay';
-      iframe.src = `chrome-extension://${extId}/${extPage}`;
-      iframe.setAttribute('style', style);
-      document.body.appendChild(iframe);
-    },
-    { extId: extensionId, extPage, style: OVERLAY_STYLE[mode] },
-  );
-
-  const handle = await page.waitForSelector('iframe#gse-overlay', { state: 'attached' });
-  const frame = await handle.contentFrame();
-  if (!frame) throw new Error(`overlay iframe not found for ${mode}`);
-  await frame.waitForLoadState('domcontentloaded');
-  await frame.locator('input').first().waitFor({ state: 'attached' });
-
-  // The React app calls window.open(url, '_blank'). Reroute it to navigate the
-  // parent (GitHub) so the result page appears in the same screencast.
-  await frame.evaluate(() => {
-    window.open = (url) => {
-      if (url) (window.top as Window).location.href = String(url);
-      return null;
-    };
-  });
-
-  return frame;
-}
-
-async function openWithOverlay(mode: 'popup' | 'sidepanel'): Promise<{ page: Page; frame: Frame }> {
-  const page = await context.newPage();
-  await page.setViewportSize(SIZE);
-  // Load the real GitHub page as the backdrop.
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(2000);
-  const frame = await mountOverlay(page, mode);
-  return { page, frame };
-}
+});
 
 async function openExtensionPage(file: string): Promise<Page> {
   const page = await context.newPage();
   await page.setViewportSize(SIZE);
   await page.goto(`chrome-extension://${extensionId}/${file}`, { waitUntil: 'load' });
   return page;
+}
+
+async function openWithOverlay(mode: 'popup' | 'sidepanel'): Promise<{
+  page: Page;
+  overlayFrame: Frame;
+}> {
+  const page = await context.newPage();
+  await page.setViewportSize(SIZE);
+
+  // Strip framing restrictions so github.com can be iframed. Only http(s) URLs
+  // — Playwright's route.fetch can't handle chrome-extension://.
+  await page.route(/^https?:\/\//, async (route) => {
+    try {
+      const response = await route.fetch();
+      const body = await response.body();
+      const headers = { ...response.headers() };
+      delete headers['x-frame-options'];
+      delete headers['content-security-policy'];
+      delete headers['content-security-policy-report-only'];
+      delete headers['cross-origin-opener-policy'];
+      delete headers['cross-origin-embedder-policy'];
+      delete headers['cross-origin-resource-policy'];
+      await route.fulfill({ status: response.status(), headers, body });
+    } catch {
+      await route.continue();
+    }
+  });
+
+  await page.goto(
+    `chrome-extension://${extensionId}/mockup.html?mode=${mode}&base=${encodeURIComponent(BASE_URL)}`,
+    { waitUntil: 'load' },
+  );
+
+  // Wait for both iframes to mount and for the overlay's React app to render.
+  await page.waitForSelector('iframe#overlay', { state: 'attached' });
+  const overlayHandle = await page.$('iframe#overlay');
+  const overlayFrame = await overlayHandle!.contentFrame();
+  if (!overlayFrame) throw new Error('overlay frame missing');
+  await overlayFrame.waitForLoadState('domcontentloaded');
+  await overlayFrame.locator('input').first().waitFor({ state: 'attached' });
+
+  // Give the backdrop github iframe time to settle.
+  await page.waitForTimeout(2500);
+
+  // Reroute window.open so search-button clicks navigate the *backdrop* iframe
+  // instead of replacing the whole document. This keeps the sidepanel iframe
+  // alive across the navigation.
+  await overlayFrame.evaluate(() => {
+    window.open = (url) => {
+      if (!url) return null;
+      const parentDoc = window.parent.document;
+      const backdrop = parentDoc.getElementById('backdrop') as HTMLIFrameElement | null;
+      if (backdrop) backdrop.src = String(url);
+      return null;
+    };
+  });
+
+  return { page, overlayFrame };
 }
 
 async function finalize(page: Page, name: string) {
@@ -158,47 +141,37 @@ async function finalize(page: Page, name: string) {
 }
 
 async function fillSearch(frame: Frame) {
-  // Repository search ignores code-only qualifiers like `path:`, so keep the
-  // demo to plain text terms that actually return public results.
   await frame.getByLabel('Keyword').fill('react hooks');
   await frame.page().waitForTimeout(500);
   await frame.getByLabel('Exclusion').fill('boilerplate');
   await frame.page().waitForTimeout(500);
 }
 
-async function clickRepositories(page: Page, frame: Frame, mode: 'popup' | 'sidepanel') {
-  const navPromise = page.waitForURL(/github\.com\/search/, { waitUntil: 'domcontentloaded' });
+async function clickRepositories(page: Page, frame: Frame) {
   await frame.getByRole('button', { name: 'Repositories', exact: true }).click();
-  await navPromise;
-  await page.waitForTimeout(1000);
-  if (mode === 'sidepanel') {
-    // Side Panel persists across navigation in real Chrome, so remount it on
-    // top of the search results page.
-    await mountOverlay(page, 'sidepanel');
-  }
-  await page.waitForTimeout(2500);
+  // The backdrop iframe navigates; the overlay (sidepanel) keeps running.
+  await page.waitForTimeout(4000);
 }
 
 test('popup', async () => {
-  const { page, frame } = await openWithOverlay('popup');
-  await fillSearch(frame);
+  const { page, overlayFrame } = await openWithOverlay('popup');
+  await fillSearch(overlayFrame);
   await page.screenshot({ path: path.join(OUT_DIR, 'popup-1280x800.png') });
-  await clickRepositories(page, frame, 'popup');
+  await clickRepositories(page, overlayFrame);
   await finalize(page, 'popup');
 });
 
 test('sidepanel', async () => {
-  const { page, frame } = await openWithOverlay('sidepanel');
-  await fillSearch(frame);
+  const { page, overlayFrame } = await openWithOverlay('sidepanel');
+  await fillSearch(overlayFrame);
   await page.screenshot({ path: path.join(OUT_DIR, 'sidepanel-1280x800.png') });
-  await clickRepositories(page, frame, 'sidepanel');
+  await clickRepositories(page, overlayFrame);
   await finalize(page, 'sidepanel');
 });
 
 test('options', async () => {
   const page = await openExtensionPage('options.html');
   await page.screenshot({ path: path.join(OUT_DIR, 'options-1280x800.png') });
-  // Walk through the three tabs so the screencast actually demonstrates the page.
   for (const tab of ['検索オプション', '設定', 'クイック検索']) {
     await page.waitForTimeout(1500);
     await page.getByRole('button', { name: tab, exact: true }).click();
