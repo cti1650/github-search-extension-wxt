@@ -35,6 +35,28 @@ export const BUILTIN_TEMPLATES: ReadonlyArray<Omit<Template, 'enabled' | 'builti
       '(path:package.json OR path:package-lock.json OR path:yarn.lock OR path:pnpm-lock.yaml)',
   },
   { id: 'builtin:security-md', name: 'SECURITY.md', pattern: 'path:SECURITY.md' },
+  // package.json の dependencies / devDependencies 構造でフィルタ
+  {
+    id: 'builtin:has-deps',
+    name: 'Has dependencies',
+    pattern: 'path:package.json /"dependencies"/',
+  },
+  {
+    id: 'builtin:dev-only',
+    name: 'Dev-only deps',
+    pattern: 'path:package.json /"devDependencies"/ NOT /"dependencies"/',
+  },
+  // フレームワーク/ライブラリ別フィルタ (package.json に該当パッケージが宣言されている repo)
+  { id: 'builtin:uses-vite', name: 'Uses Vite', pattern: 'path:package.json /"vite":/' },
+  { id: 'builtin:uses-next', name: 'Uses Next.js', pattern: 'path:package.json /"next":/' },
+  { id: 'builtin:uses-react', name: 'Uses React', pattern: 'path:package.json /"react":/' },
+  { id: 'builtin:uses-vue', name: 'Uses Vue', pattern: 'path:package.json /"vue":/' },
+  { id: 'builtin:uses-express', name: 'Uses Express', pattern: 'path:package.json /"express":/' },
+  {
+    id: 'builtin:uses-typescript',
+    name: 'Uses TypeScript',
+    pattern: 'path:package.json /"typescript":/',
+  },
 ];
 
 const toTemplate = (t: Omit<Template, 'enabled' | 'builtin'>): Template => ({

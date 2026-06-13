@@ -65,6 +65,9 @@ UI は Popup（ミニマル）と Side Panel（フル機能）の 2 種類から
 | 鮮度 | Created: last 30 days / last year | `created:>{{30d}}` / `created:>{{365d}}` |
 | 依存 | npm Package | `(path:package.json OR path:package-lock.json OR path:yarn.lock OR path:pnpm-lock.yaml)` |
 | セキュリティ | SECURITY.md | `path:SECURITY.md` |
+| 依存構造 | Has dependencies | `path:package.json /"dependencies"/` |
+| 依存構造 | Dev-only deps | `path:package.json /"devDependencies"/ NOT /"dependencies"/` |
+| フレームワーク | Uses Vite / Next.js / React / Vue / Express / TypeScript | `path:package.json /"<pkg>":/` 形式（package.json 内に該当パッケージが宣言されている repo に限定） |
 
 ### カスタムテンプレート
 
