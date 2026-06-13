@@ -85,13 +85,7 @@ const OVERLAY_STYLE = {
   ].join(';'),
 } as const;
 
-async function openWithOverlay(mode: 'popup' | 'sidepanel'): Promise<{ page: Page; frame: Frame }> {
-  const page = await context.newPage();
-  await page.setViewportSize(SIZE);
-  // Load the real GitHub page as the backdrop.
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(2000);
-
+async function mountOverlay(page: Page, mode: 'popup' | 'sidepanel'): Promise<Frame> {
   if (mode === 'sidepanel') {
     // Mimic Chrome's Side Panel docking: shrink the backdrop page horizontally
     // so the panel sits beside the content instead of on top of it.
@@ -134,6 +128,16 @@ async function openWithOverlay(mode: 'popup' | 'sidepanel'): Promise<{ page: Pag
     };
   });
 
+  return frame;
+}
+
+async function openWithOverlay(mode: 'popup' | 'sidepanel'): Promise<{ page: Page; frame: Frame }> {
+  const page = await context.newPage();
+  await page.setViewportSize(SIZE);
+  // Load the real GitHub page as the backdrop.
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2000);
+  const frame = await mountOverlay(page, mode);
   return { page, frame };
 }
 
@@ -162,9 +166,16 @@ async function fillSearch(frame: Frame) {
   await frame.page().waitForTimeout(500);
 }
 
-async function clickRepositories(page: Page, frame: Frame) {
+async function clickRepositories(page: Page, frame: Frame, mode: 'popup' | 'sidepanel') {
+  const navPromise = page.waitForURL(/github\.com\/search/, { waitUntil: 'domcontentloaded' });
   await frame.getByRole('button', { name: 'Repositories', exact: true }).click();
-  await page.waitForLoadState('load');
+  await navPromise;
+  await page.waitForTimeout(1000);
+  if (mode === 'sidepanel') {
+    // Side Panel persists across navigation in real Chrome, so remount it on
+    // top of the search results page.
+    await mountOverlay(page, 'sidepanel');
+  }
   await page.waitForTimeout(2500);
 }
 
@@ -172,7 +183,7 @@ test('popup', async () => {
   const { page, frame } = await openWithOverlay('popup');
   await fillSearch(frame);
   await page.screenshot({ path: path.join(OUT_DIR, 'popup-1280x800.png') });
-  await clickRepositories(page, frame);
+  await clickRepositories(page, frame, 'popup');
   await finalize(page, 'popup');
 });
 
@@ -180,7 +191,7 @@ test('sidepanel', async () => {
   const { page, frame } = await openWithOverlay('sidepanel');
   await fillSearch(frame);
   await page.screenshot({ path: path.join(OUT_DIR, 'sidepanel-1280x800.png') });
-  await clickRepositories(page, frame);
+  await clickRepositories(page, frame, 'sidepanel');
   await finalize(page, 'sidepanel');
 });
 
