@@ -137,9 +137,11 @@ async function finalize(page: Page, name: string) {
 }
 
 async function fillSearch(frame: Frame) {
+  // Repository search ignores code-only qualifiers like `path:`, so keep the
+  // demo to plain text terms that actually return public results.
   await frame.getByLabel('Keyword').fill('react hooks');
   await frame.page().waitForTimeout(500);
-  await frame.getByLabel('File or Extension').fill('tsx,ts');
+  await frame.getByLabel('Exclusion').fill('boilerplate');
   await frame.page().waitForTimeout(500);
 }
 
