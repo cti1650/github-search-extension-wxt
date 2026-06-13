@@ -143,8 +143,8 @@ async function fillSearch(frame: Frame) {
   await frame.page().waitForTimeout(500);
 }
 
-async function clickCode(page: Page, frame: Frame) {
-  await frame.getByRole('button', { name: 'Code', exact: true }).click();
+async function clickRepositories(page: Page, frame: Frame) {
+  await frame.getByRole('button', { name: 'Repositories', exact: true }).click();
   await page.waitForLoadState('load');
   await page.waitForTimeout(2500);
 }
@@ -153,7 +153,7 @@ test('popup', async () => {
   const { page, frame } = await openWithOverlay('popup');
   await fillSearch(frame);
   await page.screenshot({ path: path.join(OUT_DIR, 'popup-1280x800.png') });
-  await clickCode(page, frame);
+  await clickRepositories(page, frame);
   await finalize(page, 'popup');
 });
 
@@ -161,7 +161,7 @@ test('sidepanel', async () => {
   const { page, frame } = await openWithOverlay('sidepanel');
   await fillSearch(frame);
   await page.screenshot({ path: path.join(OUT_DIR, 'sidepanel-1280x800.png') });
-  await clickCode(page, frame);
+  await clickRepositories(page, frame);
   await finalize(page, 'sidepanel');
 });
 

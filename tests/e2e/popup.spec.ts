@@ -33,19 +33,19 @@ test('popup renders the title', async () => {
   await expect(page.getByText('GitHub Search Extension')).toBeVisible();
 });
 
-test('clicking Code button opens a GitHub code search tab', async () => {
+test('clicking Repositories button opens a GitHub repository search tab', async () => {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
   await page.getByLabel('Keyword').fill('react hooks');
 
   const newPagePromise = context.waitForEvent('page');
-  await page.getByRole('button', { name: 'Code', exact: true }).click();
+  await page.getByRole('button', { name: 'Repositories', exact: true }).click();
 
   const newPage = await newPagePromise;
   await newPage.waitForLoadState('domcontentloaded');
   expect(newPage.url()).toContain('github.com/search');
-  expect(newPage.url()).toContain('type=code');
+  expect(newPage.url()).toContain('type=repositories');
   expect(decodeURIComponent(newPage.url())).toContain('react');
   expect(decodeURIComponent(newPage.url())).toContain('hooks');
 });
