@@ -57,6 +57,8 @@ test.afterAll(async () => {
   fs.rmSync(path.join(OUT_DIR, '.playwright-output'), { recursive: true, force: true });
 });
 
+const SIDEPANEL_WIDTH = 420;
+
 const OVERLAY_STYLE = {
   popup: [
     'position:fixed',
@@ -74,7 +76,7 @@ const OVERLAY_STYLE = {
     'position:fixed',
     'top:0',
     'right:0',
-    'width:420px',
+    `width:${SIDEPANEL_WIDTH}px`,
     'height:100dvh',
     'border:0',
     'box-shadow:-6px 0 24px rgba(0,0,0,0.5)',
@@ -89,6 +91,21 @@ async function openWithOverlay(mode: 'popup' | 'sidepanel'): Promise<{ page: Pag
   // Load the real GitHub page as the backdrop.
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2000);
+
+  if (mode === 'sidepanel') {
+    // Mimic Chrome's Side Panel docking: shrink the backdrop page horizontally
+    // so the panel sits beside the content instead of on top of it.
+    await page.addStyleTag({
+      content: `
+        html, body {
+          width: calc(100vw - ${SIDEPANEL_WIDTH}px) !important;
+          max-width: calc(100vw - ${SIDEPANEL_WIDTH}px) !important;
+          overflow-x: hidden !important;
+        }
+      `,
+    });
+    await page.waitForTimeout(500);
+  }
 
   const extPage = mode === 'popup' ? 'popup.html' : 'sidepanel.html';
   await page.evaluate(
@@ -170,6 +187,11 @@ test('sidepanel', async () => {
 test('options', async () => {
   const page = await openExtensionPage('options.html');
   await page.screenshot({ path: path.join(OUT_DIR, 'options-1280x800.png') });
+  // Walk through the three tabs so the screencast actually demonstrates the page.
+  for (const tab of ['検索オプション', '設定', 'クイック検索']) {
+    await page.waitForTimeout(1500);
+    await page.getByRole('button', { name: tab, exact: true }).click();
+  }
   await page.waitForTimeout(1500);
   await finalize(page, 'options');
 });
