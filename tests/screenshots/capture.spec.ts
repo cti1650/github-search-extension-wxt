@@ -65,9 +65,21 @@ async function fillSearch(page: Page) {
   await page.waitForTimeout(500);
 }
 
+// Redirect window.open into in-place navigation so the recording stays on one page
+// and captures both the popup interaction and the resulting search page.
+async function inlineOpen(page: Page) {
+  await page.evaluate(() => {
+    window.open = (url) => {
+      if (url) window.location.href = String(url);
+      return null;
+    };
+  });
+}
+
 async function clickCode(page: Page) {
   await page.getByRole('button', { name: 'Code', exact: true }).click();
-  await page.waitForTimeout(1500);
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(2500);
 }
 
 test('popup', async () => {
@@ -78,6 +90,7 @@ test('popup', async () => {
       body { display: flex; align-items: center; justify-content: center; }
     `,
   });
+  await inlineOpen(page);
   await fillSearch(page);
   await page.screenshot({ path: path.join(OUT_DIR, 'popup-1280x800.png') });
   await clickCode(page);
@@ -86,6 +99,7 @@ test('popup', async () => {
 
 test('sidepanel', async () => {
   const page = await openPage('sidepanel.html');
+  await inlineOpen(page);
   await fillSearch(page);
   await page.screenshot({ path: path.join(OUT_DIR, 'sidepanel-1280x800.png') });
   await clickCode(page);
