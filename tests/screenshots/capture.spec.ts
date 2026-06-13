@@ -60,19 +60,19 @@ test.afterAll(async () => {
 const OVERLAY_STYLE = {
   popup: [
     'position:fixed',
-    'top:100px',
+    'top:0',
     'right:8px',
     'width:392px',
     'height:332px',
     'border:0',
-    'border-radius:8px',
+    'border-radius:0 0 8px 8px',
     'box-shadow:0 12px 32px rgba(0,0,0,0.5)',
     'z-index:2147483647',
     'background:#1f2937',
   ].join(';'),
   sidepanel: [
     'position:fixed',
-    'top:96px',
+    'top:0',
     'right:0',
     'bottom:0',
     'width:420px',
