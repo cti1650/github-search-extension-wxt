@@ -55,6 +55,30 @@ describe('buildGitHubSearch', () => {
     expect(decodeURIComponent(lastOpenedUrl())).toContain('path:package.json');
   });
 
+  it('treats dotfiles as a path pattern, not a bare extension', () => {
+    make('foo', '', '.gitignore').open('Code');
+    const url = decodeURIComponent(lastOpenedUrl());
+    expect(url).toContain('path:.gitignore');
+    expect(url).not.toContain('path:*..gitignore');
+  });
+
+  it('preserves glob patterns starting with `**/`', () => {
+    make('foo', '', '**/pinact.yml').open('Code');
+    expect(decodeURIComponent(lastOpenedUrl())).toContain('path:**/pinact.yml');
+  });
+
+  it('preserves glob patterns starting with `*/`', () => {
+    make('foo', '', '*/pinact.yml').open('Code');
+    expect(decodeURIComponent(lastOpenedUrl())).toContain('path:*/pinact.yml');
+  });
+
+  it('preserves path patterns starting with a dot directory', () => {
+    make('foo', '', '.github/**/pinact.yml').open('Code');
+    const url = decodeURIComponent(lastOpenedUrl());
+    expect(url).toContain('path:.github/**/pinact.yml');
+    expect(url).not.toContain('path:*..github');
+  });
+
   it('builds Repositories URL on Repositories type', () => {
     make('react').open('Repositories');
     expect(lastOpenedUrl()).toBe('https://github.com/search?type=repositories&q=react');
