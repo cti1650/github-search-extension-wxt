@@ -53,7 +53,11 @@ export const buildGitHubSearch = (props: Props) => {
     .filter((v) => v)
     .map((word) => {
       const trimmed = word.trim();
-      return trimmed.indexOf('.') > 0 ? `path:${trimmed}` : `path:*.${trimmed}`;
+      // Bare extension (`tsx`, `js` 等) は `*.` を付ける。
+      // `.`, `/`, `*` のいずれかを含む場合は既に path/glob とみなしてそのまま使う
+      // (`package.json`, `.github/**/pinact.yml`, `*/pinact.yml` などに対応)。
+      const isBareExtension = /^[\w-]+$/.test(trimmed);
+      return isBareExtension ? `path:*.${trimmed}` : `path:${trimmed}`;
     });
 
   const parseQuery = (arr: string[]) => {
